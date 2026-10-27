@@ -44,6 +44,7 @@ input, select, textarea { font: inherit; color: inherit; width: 100%; min-height
 textarea { min-height: 0; resize: vertical; }
 input[type=color] { padding: .2rem; height: 42px; }
 input[type=checkbox] { width: 20px; height: 20px; min-height: 0; accent-color: var(--tema); flex: none; }
+input.sbagliato { border-color: var(--neg); background: #fdf1ef; }
 input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb, var(--tema) 40%, transparent); outline-offset: 0; border-color: var(--tema); }
 .f { display: flex; flex-direction: column; gap: .25rem; min-width: 0; }
 .f > span { font-size: .85rem; font-weight: 600; color: var(--tenue); }

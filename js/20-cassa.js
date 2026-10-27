@@ -106,7 +106,7 @@
         <input class="carr-q" data-q="${i}" inputmode="decimal" value="${esc(String(v.quantita).replace('.', ','))}" aria-label="Quantità">
         <button type="button" class="qbtn" data-su="${i}" aria-label="Uno in più">+</button>
         <div class="euro sm"><input data-pr="${i}" inputmode="decimal" value="${esc(euroInput(v.prezzo))}" aria-label="Prezzo"><span>€</span></div>
-        <b class="carr-tot">${esc(eur(Math.round(v.quantita * v.prezzo)))}</b><button type="button" class="link neg" data-togli="${i}" aria-label="Togli">✕</button></div></li>`).join('')}</ul>`
+        <b class="carr-tot" data-rt="${i}">${esc(eur(Math.round(v.quantita * v.prezzo)))}</b><button type="button" class="link neg" data-togli="${i}" aria-label="Togli">✕</button></div></li>`).join('')}</ul>`
         : '<p class="muted">Tocca gli articoli per aggiungerli allo scontrino.</p>'}
       <div class="carr-opz grid-form">
         ${puoScontare ? `<label class="f w2"><span>Sconto</span><div class="euro"><input id="s-sconto" inputmode="decimal" value="${esc(sc.sconto ? euroInput(sc.sconto) : '')}" placeholder="0,00"><span>€</span></div></label>` : ''}
@@ -116,30 +116,57 @@
         <label class="f"><span>Nota</span><input id="s-nota" value="${esc(sc.nota)}" maxlength="300"></label>
       </div>
       <div class="metodi">${S.imp.metodi_incasso.map((m) => `<button type="button" data-met="${esc(m)}" class="${m === sc.metodo ? 'on' : ''}">${esc(cap(m))}</button>`).join('')}</div>
-      <div class="carr-totale"><span>Totale${sc.sconto ? ` <small class="muted">(sconto ${esc(eur(sc.sconto))})</small>` : ''}</span><b>${esc(eur(tot))}</b></div>
+      <div class="carr-totale"><span>Totale <small class="muted" id="s-sc-nota">${sc.sconto ? `(sconto ${esc(eur(sc.sconto))})` : ''}</small></span><b id="s-tot">${esc(eur(tot))}</b></div>
+      <p class="alert err" id="s-err" hidden></p>
       ${sc.metodo === 'contanti' && sc.voci.length ? '<div class="resto"><label class="f"><span>Contanti ricevuti</span><div class="euro"><input id="s-ricevuti" inputmode="decimal"><span>€</span></div></label><b id="s-resto"></b></div>' : ''}
       <div class="azioni"><button type="button" class="btn ghost" id="s-svuota"${sc.voci.length ? '' : ' disabled'}>Svuota</button>
         <button type="button" class="btn primary big" id="s-ok"${sc.voci.length ? '' : ' disabled'}>Incassa ${esc(eur(tot))}</button></div>`;
-    const giro = (fn) => (e) => { fn(Number(e.currentTarget.dataset[Object.keys(e.currentTarget.dataset)[0]]), e.currentTarget); memo(); disegnaScontrino(); };
+    // pulsanti: cambiano le righe, si ridisegna
+    const giro = (fn) => (e) => { fn(Number(Object.values(e.currentTarget.dataset)[0])); memo(); disegnaScontrino(); };
     $$('[data-su]', box).forEach((b) => (b.onclick = giro((i) => { sc.voci[i].quantita = Math.round((sc.voci[i].quantita + 1) * 100) / 100; })));
     $$('[data-giu]', box).forEach((b) => (b.onclick = giro((i) => { if (sc.voci[i].quantita > 1) sc.voci[i].quantita = Math.round((sc.voci[i].quantita - 1) * 100) / 100; else sc.voci.splice(i, 1); })));
     $$('[data-togli]', box).forEach((b) => (b.onclick = giro((i) => sc.voci.splice(i, 1))));
-    $$('[data-q]', box).forEach((el) => (el.onchange = giro((i, t) => { const n = qty(t.value); if (n > 0) sc.voci[i].quantita = n; })));
-    $$('[data-pr]', box).forEach((el) => (el.onchange = giro((i, t) => { const n = cent(t.value); if (n >= 0) sc.voci[i].prezzo = n; })));
+    // campi: si aggiornano mentre si scrive SENZA ridisegnare (un tocco su «Incassa» subito dopo non va perso)
+    const campo = (el, leggi, scrivi, formatta) => {
+      el.oninput = () => { const n = leggi(el.value); const buono = n != null && !Number.isNaN(n); el.classList.toggle('sbagliato', !buono && el.value.trim() !== ''); if (buono) { scrivi(n); memo(); totali(); } };
+      el.onchange = () => {
+        const n = leggi(el.value);
+        if (n == null || Number.isNaN(n)) { el.classList.add('sbagliato'); errore(el.value.trim() ? `«${el.value.trim()}» non è un numero valido: scrivi ad esempio 4,50` : 'Scrivi un numero (es. 4,50)'); return; }
+        el.classList.remove('sbagliato'); errore(''); el.value = formatta(n);
+      };
+    };
+    $$('[data-q]', box).forEach((el) => { const i = Number(el.dataset.q); campo(el, (v) => { const n = qty(v); return n > 0 ? n : n == null ? null : NaN; }, (n) => { sc.voci[i].quantita = n; }, (n) => String(n).replace('.', ',')); });
+    $$('[data-pr]', box).forEach((el) => { const i = Number(el.dataset.pr); campo(el, (v) => { const n = cent(v); return n == null || n >= 0 ? n : NaN; }, (n) => { sc.voci[i].prezzo = n; }, euroInput); });
+    const s = $('#s-sconto');
+    if (s) campo(s, (v) => { const n = cent(v); return n == null ? 0 : n >= 0 ? n : NaN; }, (n) => { sc.sconto = Math.min(n, lordo()); }, (n) => (n ? euroInput(Math.min(n, lordo())) : ''));
     $$('[data-met]', box).forEach((b) => (b.onclick = () => { sc.metodo = b.dataset.met; memo(); disegnaScontrino(); }));
-    const s = $('#s-sconto'); if (s) s.onchange = () => { const n = cent(s.value); sc.sconto = n > 0 ? Math.min(n, lordo()) : 0; memo(); disegnaScontrino(); };
     $('#s-cat').onchange = (e) => { sc.cat = e.target.value; memo(); };
     $('#s-doc').onchange = (e) => { sc.documento = e.target.value; memo(); };
     const cl = $('#s-cli'); if (cl) cl.onchange = (e) => { sc.cliente = e.target.value; memo(); };
     $('#s-nota').onchange = (e) => { sc.nota = e.target.value; memo(); };
     const ric = $('#s-ricevuti');
-    if (ric) ric.oninput = () => { const n = cent(ric.value); $('#s-resto').textContent = n >= tot ? 'Resto ' + eur(n - tot) : ''; };
+    if (ric) ric.oninput = () => { const n = cent(ric.value), t = daPagare(); $('#s-resto').textContent = n >= t ? 'Resto ' + eur(n - t) : ''; };
     $('#s-svuota').onclick = () => { sc.voci = []; sc.sconto = 0; sc.nota = ''; sc.cliente = ''; memo(); disegnaScontrino(); };
     $('#s-ok').onclick = (e) => occupato(e.currentTarget, incassa);
   }
 
+  // aggiorna solo i numeri (righe, totale, pulsante, barra, resto)
+  function totali() {
+    sc.voci.forEach((v, i) => { const el = $(`[data-rt="${i}"]`); if (el) el.textContent = eur(Math.round(v.quantita * v.prezzo)); });
+    if (sc.sconto > lordo()) sc.sconto = lordo();
+    const t = daPagare(), pezzi = sc.voci.reduce((a, v) => a + v.quantita, 0);
+    $('#s-tot').textContent = eur(t); $('#s-ok').textContent = 'Incassa ' + eur(t);
+    $('#s-sc-nota').textContent = sc.sconto ? `(sconto ${eur(sc.sconto)})` : '';
+    const b = $('#pos-barra');
+    if (b) { b.querySelector('b').textContent = eur(t); b.querySelector('span').textContent = `🧾 ${num(pezzi)} ${pezzi === 1 ? 'pezzo' : 'pezzi'}`; }
+    const ric = $('#s-ricevuti'); if (ric && ric.value) ric.oninput();
+  }
+  function errore(m) { const e = $('#s-err'); if (e) { e.textContent = m; e.hidden = !m; } }
+
   async function incassa() {
     if (!sc.voci.length) return;
+    const sbagliato = $('#scontrino .sbagliato');
+    if (sbagliato) { errore('Correggi il campo in rosso prima di incassare (es. 4,50)'); sbagliato.focus(); return; }
     const totale = daPagare();
     try {
       await rpc('registra_vendita', { p: {

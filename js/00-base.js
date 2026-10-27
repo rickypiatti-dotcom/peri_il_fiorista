@@ -19,7 +19,7 @@ window.FG = (() => {
   const perc = (x) => (x == null || !isFinite(x) ? '—' : (x * 100).toLocaleString('it-IT', { maximumFractionDigits: 1 }) + '%');
   // Importo scritto a mano ("1.890,00", "1890.5", "24") -> centesimi. null se vuoto, NaN se sbagliato.
   function cent(v) {
-    let s = String(v ?? '').replace(/[€\s]/g, '');
+    let s = String(v ?? '').replace(/[€\s]/g, '').replace(/[.,]$/, '');
     if (!s) return null;
     if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
     if (!/^-?\d+(\.\d{1,2})?$/.test(s)) return NaN;
@@ -27,7 +27,7 @@ window.FG = (() => {
   }
   // Quantità ("1,5", "12") -> numero. null se vuoto, NaN se sbagliato.
   function qty(v) {
-    const s = String(v ?? '').trim().replace(',', '.');
+    const s = String(v ?? '').trim().replace(/[.,]$/, '').replace(',', '.');
     if (!s) return null;
     if (!/^-?\d+(\.\d{1,2})?$/.test(s)) return NaN;
     return Number(s);
@@ -191,6 +191,25 @@ window.FG = (() => {
       render(true);
     }, 500);
   }
+
+  // ------------------------------------------------------------ campi numerici: al tocco si seleziona tutto, così si scrive sopra
+  document.addEventListener('focusin', (e) => {
+    const t = e.target;
+    if (!(t instanceof HTMLInputElement) || t.inputMode !== 'decimal' && t.inputMode !== 'numeric') return;
+    t._selezionaAlClic = true;
+    setTimeout(() => { if (document.activeElement === t) t.select(); }, 0);
+  });
+  // il rilascio del clic (o del dito) sposterebbe il cursore dove si è toccato: per il primo tocco lo si impedisce
+  const riseleziona = (e) => {
+    const t = e.target;
+    if (!(t instanceof HTMLInputElement) || !t._selezionaAlClic) return;
+    if (e.type === 'mouseup') e.preventDefault();
+    t.select();
+    if (e.type === 'click') { t._selezionaAlClic = false; setTimeout(() => { if (document.activeElement === t) t.select(); }, 0); }
+  };
+  document.addEventListener('mouseup', riseleziona, true);
+  document.addEventListener('click', riseleziona, true);
+  document.addEventListener('keydown', (e) => { if (e.target instanceof HTMLInputElement) e.target._selezionaAlClic = false; }, true);
 
   // ------------------------------------------------------------ finestre
   function apri(html, cls = '') {
