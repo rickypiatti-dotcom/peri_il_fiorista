@@ -36,7 +36,7 @@
 
   async function cliente(id) {
     const [[c], ric, ordini, entrate] = await Promise.all([get('clienti?id=eq.' + id), get('ricorrenze?cliente_id=eq.' + id + '&order=mese,giorno'),
-      get('ordini_vista?cliente_id=eq.' + id + '&order=data_consegna.desc&limit=50'), isOwner() ? get('entrate?cliente_id=eq.' + id + '&select=totale_cent,data&order=data.desc') : []]);
+      get('ordini_vista?cliente_id=eq.' + id + '&order=data_consegna.desc&limit=50'), isOwner() ? get('entrate?cliente_id=eq.' + id + '&select=totale_cent,data&metodo=not.ilike.altro&order=data.desc') : []]);
     if (!c) return vuoto('Cliente non trovato.');
     VIEWS.clienti.c = c;
     const speso = entrate.reduce((a, e) => a + e.totale_cent, 0);

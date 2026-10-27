@@ -12,6 +12,8 @@ tar xf postgrest.tar.xz   # crea ./postgrest
 | `node stack.test.mjs` | stack vero (PostgreSQL temporaneo + PostgREST + servizio auth): 45 controlli su calcoli (magazzino, bolle, IVA, margini, composizioni, cassa, chiusura, statistiche) e permessi (titolare, commesso, anonimo) |
 | `node commesso.test.mjs` | permessi del commesso chiamando l'API col suo token: vede solo le sue vendite di oggi e i pagamenti degli ordini, niente incassi nel cruscotto, chiusure passate, spese, statistiche, costi e margini (tabelle e viste); i costi che scrive vengono ignorati; il titolare vede tutto |
 | `node cassa.test.mjs` | suite completa della CASSA (39 controlli, computer + telefono con tocco): riquadri, ricerca, codice a barre, quantità/prezzo/sconto scritti a mano (selezione al tocco, totali in diretta, valori sbagliati), metodi e resto, importo libero, scontrino salvato, doppio tocco, aggiornamenti da altri dispositivi, totale di giornata, incassi (filtri, CSV, modifica, annullo), chiusura di cassa, permessi del commesso |
+| `node altro.test.mjs` | pagamenti «altro» (buoni regalo) esclusi da cruscotto, statistiche, chiusura di cassa ed elenco incassi; letti solo dalla pagina Altro |
+| `node altro-browser.test.mjs` | pagina Altro nel browser: clic sul fiore, totale di giornata con «altro», cruscotto/incassi/statistiche senza, telefono, commesso (stesse variabili di browser.test) |
 | `node browser.test.mjs` | Chromium vero dietro nginx vero con la configurazione del sito: tutto il percorso del titolare, telefono (nessuna pagina più larga dello schermo), commesso; fallisce a qualsiasi errore JavaScript; schermate in `shots/` |
 
 `browser.test.mjs` vuole queste variabili (niente sudo: tutto scaricato in una cartella temporanea):

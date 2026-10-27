@@ -99,7 +99,7 @@
     f.onchange = () => { if (f.da.value && f.a.value) { P.chiave = ''; P.da = f.da.value; P.a = f.a.value; render(); } };
     $('#st-stampa', v).onclick = () => stampa($('#st-corpo', v).innerHTML, `${S.imp.nome_attivita} · statistiche dal ${dataIt(P.da)} al ${dataIt(P.a)}`);
     $('#st-csv', v).onclick = async () => {
-      const [ent, spe] = await Promise.all([get(`entrate_vista?data=gte.${P.da}&data=lte.${P.a}&order=data,id`), get(`spese_vista?data=gte.${P.da}&data=lte.${P.a}&order=data,id`)]);
+      const [ent, spe] = await Promise.all([get(`entrate_vista?data=gte.${P.da}&data=lte.${P.a}&metodo=not.ilike.altro&order=data,id`), get(`spese_vista?data=gte.${P.da}&data=lte.${P.a}&order=data,id`)]);
       csv(`incassi_${P.da}_${P.a}`, ['Data', 'Descrizione', 'Tipo', 'Cliente', 'Metodo', 'Documento', 'Numero', 'Totale', 'IVA', 'Imponibile'],
         ent.map((r) => [r.data, r.articoli || r.descrizione || '', r.categoria || '', r.cliente || '', r.metodo, r.documento, r.numero_documento || '', eurCsv(r.totale_cent), eurCsv(r.iva_cent), eurCsv(r.totale_cent - r.iva_cent)]));
       setTimeout(() => csv(`spese_${P.da}_${P.a}`, ['Data', 'Descrizione', 'Categoria', 'Fornitore', 'Numero documento', 'Totale', 'IVA', 'Imponibile', 'Pagamento', 'Pagata', 'Allegati'],

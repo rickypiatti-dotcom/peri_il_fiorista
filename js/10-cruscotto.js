@@ -43,7 +43,7 @@
     if (isOwner()) await Promise.all(vicine.map(async (f) => {
       const y = Number(f.quando.slice(0, 4)) - 1, d = FG.dataFesta(f, y);
       try {
-        const r = await get(`entrate?select=totale_cent&data=gte.${addGiorni(d, -6)}&data=lte.${d}`);
+        const r = await get(`entrate?select=totale_cent&data=gte.${addGiorni(d, -6)}&data=lte.${d}&metodo=not.ilike.altro`);
         f.anno_scorso = r.reduce((a, x) => a + x.totale_cent, 0);
       } catch { f.anno_scorso = null; }
     }));

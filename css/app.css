@@ -86,6 +86,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb
 .side { position: sticky; top: 0; height: 100vh; overflow: auto; background: var(--tema); color: #fff; display: flex; flex-direction: column; padding: 1rem .7rem; }
 .brand { display: flex; align-items: center; gap: .6rem; padding: .2rem .5rem 1rem; font-size: 1.05rem; }
 .brand img { border-radius: 9px; background: #fff2; }
+.fiore { display: inline-flex; border-radius: 9px; line-height: 0; transition: transform .15s; }
+.fiore:hover { transform: scale(1.08); }
+.fiore:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.top .fiore img { border-radius: 7px; background: #fff2; }
 #nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 #nav a { display: flex; align-items: center; gap: .65rem; color: #fff; text-decoration: none; padding: .62rem .7rem; border-radius: 9px; opacity: .88; font-weight: 500; }
 #nav a:hover { background: #ffffff1a; opacity: 1; }

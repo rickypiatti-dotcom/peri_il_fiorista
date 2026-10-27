@@ -192,7 +192,7 @@
         <label class="f w2"><span>Tipo di incasso</span><select name="cat">${catDi('entrata').map((c) => `<option value="${c.id}">${esc(c.nome)}</option>`).join('')}</select></label>
         <label class="f w2"><span>IVA media</span><select name="iva">${[10, 22, 4, 5, 0].map((a) => `<option value="${a}"${Number(S.imp.aliquota_default) === a ? ' selected' : ''}>${a}%</option>`).join('')}</select></label>
         <label class="f w2"><span>Numero chiusura (Z)</span><input name="doc" maxlength="60" placeholder="facoltativo"></label>
-        ${S.imp.metodi_incasso.map((m) => `<label class="f w2"><span>${esc(cap(m))}</span><div class="euro"><input data-met="${esc(m)}" inputmode="decimal" placeholder="0,00"><span>€</span></div></label>`).join('')}
+        ${S.imp.metodi_incasso.map((m) => `<label class="f w2"><span>${esc(cap(m))}${FG.separato(m) ? ' <small class="muted">· contabilità a parte 🌸</small>' : ''}</span><div class="euro"><input data-met="${esc(m)}" inputmode="decimal" placeholder="0,00"><span>€</span></div></label>`).join('')}
       </div><div class="carr-totale"><span>Totale</span><b id="gg-tot">${esc(eur(0))}</b></div>
       <p class="alert err" hidden></p><div class="azioni"><button class="btn primary" type="submit">Registra</button></div></form></section>`;
   }
@@ -223,7 +223,9 @@
   const F = { da: oggi(), a: oggi(), metodo: '', cat: '' };
   async function incassi() {
     if (!isOwner()) return mieVendite();
-    let q = `entrate_vista?data=gte.${F.da}&data=lte.${F.a}&order=data.desc,id.desc&limit=2000`;
+    // i pagamenti "altro" (buoni regalo) hanno una contabilità a parte: pagina Altro (clic sul fiore)
+    if (FG.separato(F.metodo)) F.metodo = '';
+    let q = `entrate_vista?data=gte.${F.da}&data=lte.${F.a}&order=data.desc,id.desc&limit=2000&metodo=not.ilike.altro`;
     if (F.metodo) q += '&metodo=eq.' + encodeURIComponent(F.metodo);
     if (F.cat) q += '&categoria_id=eq.' + F.cat;
     const righe = await get(q);
@@ -234,11 +236,12 @@
       <form class="filtri" id="fi">
         <label class="f"><span>Dal</span><input type="date" name="da" value="${F.da}"></label>
         <label class="f"><span>Al</span><input type="date" name="a" value="${F.a}"></label>
-        <label class="f"><span>Metodo</span><select name="metodo"><option value="">Tutti</option>${S.imp.metodi_incasso.map((m) => `<option${m === F.metodo ? ' selected' : ''}>${esc(m)}</option>`).join('')}</select></label>
+        <label class="f"><span>Metodo</span><select name="metodo"><option value="">Tutti</option>${S.imp.metodi_incasso.filter((m) => !FG.separato(m)).map((m) => `<option${m === F.metodo ? ' selected' : ''}>${esc(m)}</option>`).join('')}</select></label>
         <label class="f"><span>Tipo</span><select name="cat"><option value="">Tutti</option>${catDi('entrata', false).map((c) => `<option value="${c.id}"${String(c.id) === F.cat ? ' selected' : ''}>${esc(c.nome)}</option>`).join('')}</select></label>
         <div class="rapidi"><button type="button" class="chip" data-p="oggi">Oggi</button><button type="button" class="chip" data-p="ieri">Ieri</button><button type="button" class="chip" data-p="mese">Questo mese</button></div>
         <button type="button" class="btn sm" id="fi-csv"${righe.length ? '' : ' disabled'}>Scarica CSV</button>
       </form>
+      <p class="muted"><small>I pagamenti «altro» (buoni regalo) non sono in questo elenco: hanno la loro <a href="#/altro" class="link">contabilità separata 🌸</a>.</small></p>
       <section class="kpi"><div class="kpi-box"><span>Totale</span><b>${esc(eur(tot))}</b><small>${righe.length} incassi</small></div>
         ${Object.entries(perMetodo).map(([m, t]) => `<div class="kpi-box"><span>${esc(cap(m))}</span><b>${esc(eur(t))}</b></div>`).join('')}</section>
       ${righe.length ? `<div class="tabella"><table><thead><tr><th>Data</th><th>Cosa</th><th>Tipo</th><th>Pagamento</th><th class="n">Importo</th></tr></thead><tbody>
@@ -305,6 +308,8 @@
       try { await rpc('annulla_entrata', { p_id: id }); toast('Incasso annullato'); render(true); } catch (ex) { toast(ex.message, 'err'); }
     };
   }
+
+  FG.dettaglioIncasso = dettaglio;
 
   // ------------------------------------------------------------ chiusura di cassa
   async function chiusura(data) {

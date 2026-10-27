@@ -50,6 +50,8 @@ window.FG = (() => {
   const TOK = 'fg_sessione';
   const S = { token: null, user: null, role: null, imp: null, cats: [], fornitori: [], route: 'cruscotto', args: [] };
   const isOwner = () => S.role === 'owner';
+  // metodo di pagamento con contabilità separata (buoni regalo); stessa regola di public.metodo_separato()
+  const separato = (m) => String(m || '').trim().toLowerCase() === 'altro';
 
   function toast(msg, kind = '') {
     const t = document.createElement('div'); t.className = 'toast ' + kind; t.textContent = msg;
@@ -385,7 +387,7 @@ window.FG = (() => {
 
   return {
     $, $$, esc, pad, eur, eur0, euroInput, num, perc, cent, qty, iso, oggi, giorno, addGiorni, dataIt, dataBreve, quando, MESI, MESI_LUNGHI, meseIt, giorniTra, cap,
-    S, isOwner, toast, rest, get, rpc, api, apriAllegato, caricaAllegato, login, setSession, sessioneSalvata, logout,
+    S, isOwner, separato, toast, rest, get, rpc, api, apriAllegato, caricaAllegato, login, setSession, sessioneSalvata, logout,
     caricaComuni, catDi, catNome, modulo, applicaAspetto, apriStream, ascoltatori, aggiornaVista,
     apri, chiudi, conferma, occupato, campo, campi, leggi, scheda, csv, eurCsv, numCsv, stampa, copia,
     VIEWS, costruisciMenu, vai, render, schede, vuoto, pill, pallino,
