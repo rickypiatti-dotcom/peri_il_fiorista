@@ -5,7 +5,8 @@
     csv, eurCsv, numCsv, catDi, catNome, schede, vuoto, render, VIEWS, euroInput, cap } = FG;
   const DOC = [['scontrino', 'Scontrino'], ['fattura', 'Fattura'], ['ricevuta', 'Ricevuta']];
   FG.DOC = DOC;
-  const tabs = (a) => schede('cassa', [['', 'Vendita'], ['giornata', 'Totale di giornata'], ['incassi', 'Incassi'], ['chiusura', 'Chiusura di cassa']], a);
+  // il commesso non vede gli incassi: solo le sue vendite di oggi (per controllarle o annullarle se permesso)
+  const tabs = (a) => schede('cassa', [['', 'Vendita'], ['giornata', 'Totale di giornata'], ['incassi', isOwner() ? 'Incassi' : 'Le mie vendite di oggi'], ['chiusura', 'Chiusura di cassa']], a);
 
   // Scontrino in preparazione: resta salvato nel browser se si cambia pagina
   const KEY = 'fg_scontrino';
@@ -19,7 +20,7 @@
   VIEWS.cassa = async (args) => {
     if (args[0] === 'giornata') return giornata();
     if (args[0] === 'incassi') return incassi();
-    if (args[0] === 'chiusura') return chiusura(args[1] || oggi());
+    if (args[0] === 'chiusura') return chiusura(isOwner() && args[1] || oggi());
     [cat.prodotti, cat.ricette, cat.clienti] = await Promise.all([
       get('prodotti_vista?attivo=is.true&order=nome&select=id,nome,codice,categoria_id,categoria,categoria_colore,prezzo_vendita_cent,unita,giacenza,a_magazzino'),
       FG.modulo('ricette') ? get('ricette_vista?attiva=is.true&order=nome&select=id,nome,prezzo_vendita_cent,possibili') : [],
@@ -34,7 +35,7 @@
     if (!args[0]) { disegnaBanco(); disegnaScontrino(); }
     else if (args[0] === 'giornata') collegaGiornata(v);
     else if (args[0] === 'incassi') collegaIncassi(v);
-    else if (args[0] === 'chiusura') collegaChiusura(v, args[1] || oggi());
+    else if (args[0] === 'chiusura') collegaChiusura(v, isOwner() && args[1] || oggi());
   };
 
   // ------------------------------------------------------------ banco: riquadri da toccare
@@ -221,6 +222,7 @@
   // ------------------------------------------------------------ elenco incassi
   const F = { da: oggi(), a: oggi(), metodo: '', cat: '' };
   async function incassi() {
+    if (!isOwner()) return mieVendite();
     let q = `entrate_vista?data=gte.${F.da}&data=lte.${F.a}&order=data.desc,id.desc&limit=2000`;
     if (F.metodo) q += '&metodo=eq.' + encodeURIComponent(F.metodo);
     if (F.cat) q += '&categoria_id=eq.' + F.cat;
@@ -246,7 +248,18 @@
           <td class="n"><b>${esc(eur(r.totale_cent))}</b>${r.sconto_cent ? `<br><small class="muted">sconto ${esc(eur(r.sconto_cent))}</small>` : ''}</td></tr>`).join('')}
         </tbody></table></div>` : vuoto('Nessun incasso nel periodo scelto.')}`;
   }
+  // commesso: le proprie vendite di oggi, senza totali, filtri né CSV
+  async function mieVendite() {
+    const righe = await get(`entrate_vista?data=eq.${oggi()}&creato_da=eq.${S.user.id}&order=id.desc`);
+    return `<header class="testa"><h1>Cassa</h1></header>${tabs('incassi')}
+      ${righe.length ? `<div class="tabella"><table><thead><tr><th>Ora</th><th>Cosa</th><th>Pagamento</th><th class="n">Importo</th></tr></thead><tbody>
+        ${righe.map((r) => `<tr data-id="${r.id}" tabindex="0"><td>${esc(new Date(r.creato_il).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }))}</td>
+          <td>${esc(r.articoli || r.descrizione || '—')}${r.cliente ? `<br><small class="muted">${esc(r.cliente)}</small>` : ''}</td>
+          <td>${esc(r.metodo)}<br><small class="muted">${esc(r.documento)}</small></td><td class="n"><b>${esc(eur(r.totale_cent))}</b></td></tr>`).join('')}
+        </tbody></table></div>` : vuoto('Oggi non hai ancora registrato vendite.')}`;
+  }
   function collegaIncassi(v) {
+    if (!isOwner()) { $$('tr[data-id]', v).forEach((tr) => (tr.onclick = tr.onkeydown = (e) => { if (e.type === 'keydown' && e.key !== 'Enter') return; dettaglio(Number(tr.dataset.id)); })); return; }
     const f = $('#fi', v);
     f.onchange = () => { F.da = f.da.value || oggi(); F.a = f.a.value || F.da; F.metodo = f.metodo.value; F.cat = f.cat.value; render(); };
     $$('[data-p]', f).forEach((b) => (b.onclick = () => {
@@ -260,7 +273,7 @@
   }
 
   async function dettaglio(id) {
-    const [[e], righe] = await Promise.all([get('entrate_vista?id=eq.' + id), get('entrata_righe?entrata_id=eq.' + id + '&order=id')]);
+    const [[e], righe] = await Promise.all([get('entrate_vista?id=eq.' + id), get('entrata_righe?entrata_id=eq.' + id + '&order=id&select=id,descrizione,quantita,prezzo_unit_cent,totale_cent')]);
     if (!e) return;
     const puoAnnullare = isOwner() || (S.imp.staff_annulla && e.creato_da === S.user.id && e.data === oggi());
     const d = apri(`<h2>Incasso del ${esc(dataIt(e.data))} <small class="muted">${esc(quando(e.creato_il))}</small></h2>
@@ -295,19 +308,18 @@
 
   // ------------------------------------------------------------ chiusura di cassa
   async function chiusura(data) {
-    const [ch, ent, storico] = await Promise.all([
-      get('chiusure?data=eq.' + data), get(`entrate?data=eq.${data}&select=metodo,totale_cent`), get('chiusure?order=data.desc&limit=31'),
+    // incassi del giorno per metodo dal database (il commesso non legge gli incassi, e solo la cassa di oggi)
+    const [ch, cg, storico] = await Promise.all([
+      get('chiusure?data=eq.' + data), rpc('cassa_giorno', { p_data: data }), isOwner() ? get('chiusure?order=data.desc&limit=31') : [],
     ]);
-    const c = ch[0] || null, per = {};
-    for (const r of ent) per[r.metodo] = (per[r.metodo] || 0) + r.totale_cent;
-    const prima = storico.find((x) => x.data < data);
+    const c = ch[0] || null, per = cg.metodi || {};
     const diff = c ? c.contati_cent - c.attesi_cent : null;
     return `<header class="testa"><h1>Cassa</h1></header>${tabs('chiusura')}
       <div class="colonne2"><section class="card"><h2>Chiusura del ${esc(dataIt(data))}</h2>
-      <label class="f"><span>Giorno</span><input type="date" id="ch-data" value="${data}" max="${oggi()}"></label>
+      ${isOwner() ? `<label class="f"><span>Giorno</span><input type="date" id="ch-data" value="${data}" max="${oggi()}"></label>` : ''}
       <ul class="lista compatta">${Object.entries(per).map(([m, t]) => `<li>${esc(cap(m))} <b>${esc(eur(t))}</b></li>`).join('') || '<li class="muted">Nessun incasso registrato in questo giorno.</li>'}</ul>
       <form id="ch" novalidate class="grid-form">
-        <label class="f w2"><span>Fondo cassa a inizio giornata</span><div class="euro"><input name="fondo" inputmode="decimal" value="${esc(euroInput(c ? c.fondo_cent : prima ? Math.max(0, prima.contati_cent) : 0))}"><span>€</span></div></label>
+        <label class="f w2"><span>Fondo cassa a inizio giornata</span><div class="euro"><input name="fondo" inputmode="decimal" value="${esc(euroInput(c ? c.fondo_cent : cg.fondo_proposto || 0))}"><span>€</span></div></label>
         <label class="f w2"><span>Contanti tolti o versati in banca</span><div class="euro"><input name="versati" inputmode="decimal" value="${esc(euroInput(c ? c.versati_cent : 0))}"><span>€</span></div></label>
         <label class="f w2"><span>Contanti contati ora *</span><div class="euro"><input name="contati" inputmode="decimal" value="${esc(c ? euroInput(c.contati_cent) : '')}" required><span>€</span></div></label>
         <label class="f"><span>Nota</span><input name="nota" value="${esc(c?.nota || '')}" maxlength="1000"></label>
@@ -316,12 +328,12 @@
         <b>${diff === 0 ? 'Cassa giusta ✓' : diff > 0 ? `Avanzano ${esc(eur(diff))}` : `Mancano ${esc(eur(-diff))}`}</b>
         <small>Attesi = fondo + incassi in contanti − spese pagate in contanti − contanti tolti. Pagamenti elettronici del giorno: ${esc(eur(c.pos_cent))} (da confrontare con la chiusura del POS).</small></div>` : ''}
       </section>
-      <section class="card"><h2>Ultime chiusure</h2>${storico.length ? `<table class="mini"><thead><tr><th>Giorno</th><th class="n">Attesi</th><th class="n">Contati</th><th class="n">Differenza</th></tr></thead><tbody>
+      ${isOwner() ? `<section class="card"><h2>Ultime chiusure</h2>${storico.length ? `<table class="mini"><thead><tr><th>Giorno</th><th class="n">Attesi</th><th class="n">Contati</th><th class="n">Differenza</th></tr></thead><tbody>
         ${storico.map((x) => `<tr><td><a href="#/cassa/chiusura/${x.data}">${esc(dataIt(x.data))}</a></td><td class="n">${esc(eur(x.attesi_cent))}</td><td class="n">${esc(eur(x.contati_cent))}</td>
-        <td class="n ${x.contati_cent === x.attesi_cent ? '' : 'neg'}">${esc(eur(x.contati_cent - x.attesi_cent))}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">Ancora nessuna chiusura.</p>'}</section></div>`;
+        <td class="n ${x.contati_cent === x.attesi_cent ? '' : 'neg'}">${esc(eur(x.contati_cent - x.attesi_cent))}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">Ancora nessuna chiusura.</p>'}</section>` : ''}</div>`;
   }
   function collegaChiusura(v, data) {
-    $('#ch-data', v).onchange = (e) => FG.vai('cassa/chiusura/' + (e.target.value || oggi()));
+    if ($('#ch-data', v)) $('#ch-data', v).onchange = (e) => FG.vai('cassa/chiusura/' + (e.target.value || oggi()));
     const f = $('#ch', v), err = f.querySelector('.alert');
     f.onsubmit = (e) => {
       e.preventDefault();

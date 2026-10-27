@@ -65,9 +65,17 @@ window.FG = (() => {
     '42501': 'Non hai il permesso per questa operazione',
     '22P02': 'Un valore non è nel formato giusto',
   };
+  // Tabelle con colonne di costo nascoste (migrazione 002): «select *» non è permesso, quindi dopo un salvataggio
+  // si chiedono indietro solo queste colonne (le letture usano le viste o un select esplicito)
+  const LEGGIBILI = {
+    prodotti: 'id,nome,codice,categoria_id,fornitore_id,unita,prezzo_vendita_cent,aliquota_iva,a_magazzino,giacenza,scorta_minima,riordino,deperibile,giorni_vita,ultimo_carico,nome_botanico,posizione,luce,acqua,note,attivo',
+    ricette: 'id,nome,categoria_id,prezzo_vendita_cent,aliquota_iva,minuti,note,attiva',
+  };
   async function rest(method, path, body, prefer = 'return=representation') {
     const headers = { Accept: 'application/json', Authorization: 'Bearer ' + S.token };
     if (body !== undefined) { headers['Content-Type'] = 'application/json'; headers.Prefer = prefer; }
+    const tab = path.split('?')[0];
+    if (body !== undefined && prefer === 'return=representation' && LEGGIBILI[tab] && !/[?&]select=/.test(path)) path += (path.includes('?') ? '&' : '?') + 'select=' + LEGGIBILI[tab];
     const r = await fetch('/rest/v1/' + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
     if (r.status === 401) { logout(); throw new Error('Sessione scaduta: rientra.'); }
     const j = r.status === 204 ? null : await r.json().catch(() => null);

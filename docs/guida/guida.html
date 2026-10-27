@@ -111,13 +111,17 @@
   <h2 id="c1-3">Titolare e commessi</h2>
   <table>
     <tr><th></th><th>Titolare</th><th>Commesso</th></tr>
-    <tr><td>Cassa, ordini, clienti, fornitori</td><td>sì</td><td>sì</td></tr>
-    <tr><td>Magazzino, bolle, composizioni</td><td>sì</td><td>sì (le spese collegate alle bolle no)</td></tr>
+    <tr><td>Vendite, totale di giornata, chiusura di cassa di oggi</td><td>sì</td><td>sì</td></tr>
+    <tr><td>Ordini e preventivi (anche acconti e saldi), clienti, fornitori</td><td>sì</td><td>sì</td></tr>
+    <tr><td>Magazzino, arrivi e bolle, composizioni</td><td>sì</td><td>sì, ma senza costi d'acquisto, margini, valore del magazzino e totali delle bolle</td></tr>
+    <tr><td>Elenco degli incassi</td><td>tutti</td><td>solo le proprie vendite di oggi</td></tr>
     <tr><td>Sconti in cassa</td><td>sì</td><td>se il titolare lo permette</td></tr>
     <tr><td>Annullare un incasso</td><td>sempre</td><td>solo i propri di oggi, se permesso</td></tr>
+    <tr><td>Incassi del giorno e del mese nel cruscotto, chiusure dei giorni passati</td><td>sì</td><td>no</td></tr>
     <tr><td>Spese, statistiche, registro, impostazioni, utenti</td><td>sì</td><td>no</td></tr>
   </table>
-  <p>Queste regole sono scritte nel database, non solo nelle pagine: un commesso non vede le spese nemmeno scrivendo a mano l'indirizzo della pagina.</p>
+  <p>Queste regole sono scritte nel database, non solo nelle pagine: un commesso non vede incassi, spese e costi nemmeno scrivendo a mano l'indirizzo della pagina.
+    Se crea un articolo nuovo, il costo d'acquisto lo inserisce poi il titolare (finché manca vale zero); negli arrivi registrati da un commesso si usa il costo già scritto nell'articolo.</p>
 
   <h2 id="c1-4">Le regole d'oro</h2>
   <div class="box consiglio"><b>Tre abitudini che rendono i numeri giusti</b>
@@ -130,7 +134,7 @@
 <!-- ================================================================ 2 -->
 <section class="capitolo" id="c2">
   <h1><span class="num">2</span>Cruscotto</h1>
-  <p>È la pagina che si apre entrando: la giornata a colpo d'occhio e tutto ciò che richiede attenzione. Il commesso vede una versione ridotta, senza spese e risultati economici.</p>
+  <p>È la pagina che si apre entrando: la giornata a colpo d'occhio e tutto ciò che richiede attenzione. Il commesso vede una versione ridotta, senza incassi, spese e risultati economici.</p>
   <figure><img src="img/01-cruscotto.jpg" alt=""><figcaption>Il cruscotto del titolare con i dati di esempio: numeri, punto di pareggio, feste e ordini</figcaption></figure>
   <h2 id="c2-1">Numeri del giorno e del mese</h2>
   <ul><li><b>Incassato oggi</b>, con il numero di incassi e la divisione per metodo di pagamento (contanti, carta…).</li>

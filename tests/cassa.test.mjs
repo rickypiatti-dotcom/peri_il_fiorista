@@ -328,13 +328,15 @@ try {
     await incassa(st);
     await q('update impostazioni set staff_sconti = true');
   });
-  await prova('commesso: annulla il suo incasso di oggi, non quelli degli altri; niente modifica', async () => {
+  await prova('commesso: vede solo le SUE vendite di oggi (niente totali, filtri, CSV); annulla la sua, niente modifica', async () => {
     const mio = await ultimaEntrata();
     const altro = (await q("select id from entrate where creato_da is null or creato_da <> $1 order by id desc limit 1", [mio.creato_da]))[0];
-    await vai(st, 'cassa/incassi');
-    await st.click(`tr[data-id="${altro.id}"]`); await st.waitForSelector('#modal .dialog');
-    assert.ok(!(await st.$('[data-annulla]')) && !(await st.$('[data-salva]'))); await st.click('[data-chiudi]');
-    await st.click(`tr[data-id="${mio.id}"]`); await st.click('[data-annulla]'); await st.click('#modal [data-si]'); await toast(st, 'Incasso annullato');
+    await vai(st, 'cassa/incassi'); await st.waitForSelector(`tr[data-id="${mio.id}"]`);
+    assert.ok((await st.content()).includes('Le mie vendite di oggi'));
+    assert.ok(!(await st.$(`tr[data-id="${altro.id}"]`)), 'le vendite degli altri non si vedono');
+    assert.ok(!(await st.$('#fi')) && !(await st.$('#fi-csv')) && !(await st.$('.kpi')), 'niente filtri, CSV né totali');
+    await st.click(`tr[data-id="${mio.id}"]`); await st.waitForSelector('#modal .dialog');
+    assert.ok(!(await st.$('[data-salva]'))); await st.click('[data-annulla]'); await st.click('#modal [data-si]'); await toast(st, 'Incasso annullato');
   });
   await prova('commesso: se il titolare lo vieta, niente annullo', async () => {
     await vai(st, 'cassa'); await st.click('.tile:has-text("Ruscus")'); await incassa(st);
@@ -342,9 +344,24 @@ try {
     await st.click(`tr[data-id="${(await ultimaEntrata()).id}"]`); await st.waitForSelector('#modal .dialog');
     assert.ok(!(await st.$('[data-annulla]')));
   });
-  await prova('commesso: chiusura di cassa di oggi sì', async () => {
+  await prova('commesso: chiusura di cassa di oggi sì, senza scegliere il giorno né lo storico', async () => {
     await st.click('[data-chiudi]'); await vai(st, 'cassa/chiusura');
+    assert.ok(!(await st.$('#ch-data')) && !(await st.content()).includes('Ultime chiusure'));
     await st.fill('#ch [name=contati]', '10'); await st.click('#ch [type=submit]'); await st.waitForSelector('.esito');
+  });
+  await prova('commesso: niente contabilità a schermo (cruscotto, menu, magazzino, composizioni, bolle)', async () => {
+    await vai(st, 'cruscotto'); await st.waitForSelector('.testa h1');
+    let t = await st.textContent('#view');
+    assert.ok(!/Incassato|Uscite del mese|Risultato del mese|Pareggio|Ultimi 12 mesi/i.test(t), 'cruscotto: ' + t.slice(0, 200));
+    const menu = await st.textContent('#nav'); assert.ok(!/Spese|Statistiche|Impostazioni/.test(menu), menu);
+    await vai(st, 'magazzino'); await st.waitForSelector('#af');
+    t = await st.textContent('#view'); assert.ok(!/valore al costo|Margine|Costo/.test(t), 'magazzino');
+    await st.click('tr[data-id]'); await st.waitForSelector('#modal form');
+    assert.ok(!(await st.$('#modal [name=prezzo_acquisto_cent]')) && !(await st.textContent('#modal')).includes('consigliato')); await st.click('#modal [data-annulla]');
+    await vai(st, 'ricette'); await st.waitForSelector('.testa h1');
+    t = await st.textContent('#view'); assert.ok(!/Materiali|Margine|Consigliato|guadagni/.test(t), 'composizioni');
+    await vai(st, 'bolle/nuova'); await st.waitForSelector('#nb');
+    assert.ok(!(await st.$('[data-rc]')) && !(await st.$('#nb-sp')) && !(await st.textContent('#nb-tot')), 'nuova bolla senza costi');
   });
 
   await prova('nessun errore JavaScript in tutta la suite', async () => {

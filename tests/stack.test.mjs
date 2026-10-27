@@ -59,7 +59,7 @@ try {
     cats = okR(await rest('categorie?order=id', { token: T }));
     assert.ok(cats.filter((c) => c.ambito === 'spesa').length >= 20); assert.ok(cats.some((c) => c.nome === 'Affitto' && c.tipo === 'fissa'));
     assert.ok(okR(await rest('calendario', { token: T })).length >= 10);
-    assert.equal(okR(await rest('prodotti', { token: T })).length, 0);
+    assert.equal(okR(await rest('prodotti?select=id', { token: T })).length, 0);
   });
   const cat = (a, n) => cats.find((c) => c.ambito === a && c.nome === n).id;
 
@@ -67,7 +67,7 @@ try {
   await prova('fornitore e articoli (commesso)', async () => {
     ids.forn = okR(await rest('fornitori', { method: 'POST', token: S, body: { nome: 'Grossista Fiori Srl' } }))[0].id;
     const base = { unita: 'pz', deperibile: false, giorni_vita: null, scorta_minima: null, a_magazzino: true };
-    const p = okR(await rest('prodotti', { method: 'POST', token: S, body: [
+    const p = okR(await rest('prodotti?select=id', { method: 'POST', token: S, body: [
       { nome: 'Rosa rossa', categoria_id: cat('prodotto', 'Fiori recisi'), unita: 'stelo', prezzo_vendita_cent: 300, aliquota_iva: 10, deperibile: true, giorni_vita: 5, scorta_minima: 10 },
       { nome: 'Ruscus (verde)', categoria_id: cat('prodotto', 'Verde ornamentale'), unita: 'stelo', prezzo_vendita_cent: 100, aliquota_iva: 10 },
       { nome: 'Vaso ceramica 14', categoria_id: cat('prodotto', 'Vasi e cachepot'), prezzo_vendita_cent: 1200, aliquota_iva: 22 },
@@ -79,10 +79,11 @@ try {
     assert.ok((await rest('prodotti?id=eq.' + ids.rosa, { method: 'PATCH', token: S, body: { giacenza: 999 } })).status >= 400);
   });
   await prova('arrivo merce con bolla: giacenze, costo aggiornato, data arrivo', async () => {
-    const r = okR(await rest('rpc/registra_carico', { method: 'POST', token: S, body: { p: { fornitore_id: ids.forn, numero_documento: 'DDT 77', data_documento: '2026-10-20', data: '2026-10-21',
+    // con i costi lo registra il titolare (quelli scritti dal commesso vengono ignorati: commesso.test.mjs)
+    const r = okR(await rest('rpc/registra_carico', { method: 'POST', token: T, body: { p: { fornitore_id: ids.forn, numero_documento: 'DDT 77', data_documento: '2026-10-20', data: '2026-10-21',
       righe: [{ prodotto_id: ids.rosa, quantita: 50, costo_unit_cent: 80 }, { prodotto_id: ids.ruscus, quantita: 30, costo_unit_cent: 20 }, { prodotto_id: ids.vaso, quantita: 10, costo_unit_cent: 400 }] } } }));
     ids.bolla1 = r.bolla_id; assert.equal(r.spesa_id, null); assert.equal(r.righe, 3);
-    const p = okR(await rest(`prodotti?id=in.(${ids.rosa},${ids.vaso})&order=id`, { token: T }));
+    const p = okR(await rest(`prodotti_vista?id=in.(${ids.rosa},${ids.vaso})&order=id`, { token: T }));
     assert.equal(Number(p[0].giacenza), 50); assert.equal(p[0].prezzo_acquisto_cent, 80); assert.equal(p[0].ultimo_carico, '2026-10-21'); assert.equal(Number(p[1].giacenza), 10);
     const [b] = okR(await rest('bolle_vista?id=eq.' + ids.bolla1, { token: T }));
     assert.equal(b.netto_cent, 50 * 80 + 30 * 20 + 10 * 400); assert.equal(b.lordo_cent, Math.round(4000 * 1.1 + 600 * 1.1 + 4000 * 1.22)); assert.equal(b.numero, 'DDT 77');
@@ -112,18 +113,18 @@ try {
     assert.equal((await auth(`api/allegati?bolla=${ids.bolla1}&nome=x.exe`, { method: 'POST', token: S, body: Buffer.from('MZ....'), raw: true })).status, 415);
   });
   await prova('scarto (commesso) e correzione d\'inventario', async () => {
-    okR(await rest('movimenti', { method: 'POST', token: S, body: { prodotto_id: ids.rosa, tipo: 'scarto', quantita: -5, motivo: 'appassite' } }));
+    okR(await rest('movimenti?select=id', { method: 'POST', token: S, body: { prodotto_id: ids.rosa, tipo: 'scarto', quantita: -5, motivo: 'appassite' } }));
     const d = okR(await rest('rpc/imposta_giacenza', { method: 'POST', token: S, body: { p_prodotto: ids.ruscus, p_contati: 28, p_motivo: 'conta' } }));
     assert.equal(Number(d), -2);
-    const p = okR(await rest(`prodotti?id=in.(${ids.rosa},${ids.ruscus})&order=id`, { token: S }));
+    const p = okR(await rest(`prodotti_vista?id=in.(${ids.rosa},${ids.ruscus})&order=id`, { token: S }));
     assert.equal(Number(p[0].giacenza), 65); assert.equal(Number(p[1].giacenza), 28);
   });
 
   console.log('Composizioni e cassa');
   await prova('composizione: costo, margine, prezzo consigliato, quante se ne possono fare', async () => {
-    ids.ric = okR(await rest('ricette', { method: 'POST', token: S, body: { nome: 'Bouquet 12 rose', prezzo_vendita_cent: 4500, aliquota_iva: 10, manodopera_cent: 500, categoria_id: cat('prodotto', 'Composizioni (ricette)') } }))[0].id;
+    ids.ric = okR(await rest('ricette?select=id', { method: 'POST', token: T, body: { nome: 'Bouquet 12 rose', prezzo_vendita_cent: 4500, aliquota_iva: 10, manodopera_cent: 500, categoria_id: cat('prodotto', 'Composizioni (ricette)') } }))[0].id;
     okR(await rest('ricetta_righe', { method: 'POST', token: S, body: [{ ricetta_id: ids.ric, prodotto_id: ids.rosa, quantita: 12 }, { ricetta_id: ids.ric, prodotto_id: ids.ruscus, quantita: 3 }] }));
-    const [r] = okR(await rest('ricette_vista?id=eq.' + ids.ric, { token: S }));
+    const [r] = okR(await rest('ricette_vista?id=eq.' + ids.ric, { token: T }));
     assert.equal(r.costo_materiali_cent, 12 * 90 + 3 * 20); // costo rosa aggiornato a 90 dalla seconda bolla
     assert.equal(r.possibili, 5); // 65 rose / 12
     assert.equal(r.margine_cent, 4500 - Math.round(4500 - 4500 / 1.1) - 1140 - 500); // netto IVA - materiali - lavoro = 2451
@@ -137,7 +138,7 @@ try {
     const [e] = okR(await rest('entrate?id=eq.' + id, { token: S }));
     assert.equal(e.totale_cent, 900 + 4500 + 1200 + 800);
     assert.equal(e.iva_cent, Math.round(900 - 900 / 1.1) + Math.round(4500 - 4500 / 1.1) + Math.round(1200 - 1200 / 1.22) + Math.round(800 - 800 / 1.22));
-    const p = okR(await rest(`prodotti?id=in.(${ids.rosa},${ids.ruscus},${ids.vaso},${ids.consegna})&order=id`, { token: S }));
+    const p = okR(await rest(`prodotti_vista?id=in.(${ids.rosa},${ids.ruscus},${ids.vaso},${ids.consegna})&order=id`, { token: S }));
     assert.deepEqual(p.map((x) => Number(x.giacenza)), [65 - 3 - 12, 28 - 3, 9, 0]);
   });
   await prova('sconto: lo rifiuta se i commessi non possono, lo accetta dal titolare', async () => {
@@ -165,7 +166,7 @@ try {
     assert.ok((await rest('rpc/annulla_entrata', { method: 'POST', token: S, body: { p_id: ids.v1 } })).status >= 400);
     okR(await rest('impostazioni?id=eq.1', { method: 'PATCH', token: T, body: { staff_annulla: true } }));
     const r = await rest('rpc/annulla_entrata', { method: 'POST', token: S, body: { p_id: ids.v1 } }); assert.ok(r.status < 300, JSON.stringify(r.j));
-    const p = okR(await rest(`prodotti?id=in.(${ids.rosa},${ids.ruscus})&order=id`, { token: S }));
+    const p = okR(await rest(`prodotti_vista?id=in.(${ids.rosa},${ids.ruscus})&order=id`, { token: S }));
     assert.deepEqual(p.map((x) => Number(x.giacenza)), [64, 28]); // 65 - 1 (vendita col titolare)
   });
 
@@ -237,7 +238,7 @@ try {
   await prova('annullare la bolla toglie la merce', async () => {
     const r = okR(await rest('rpc/registra_carico', { method: 'POST', token: S, body: { p: { righe: [{ prodotto_id: ids.vaso, quantita: 5, costo_unit_cent: 400 }] } } }));
     okR(await rest('rpc/annulla_bolla', { method: 'POST', token: S, body: { p_id: r.bolla_id } }));
-    const [p] = okR(await rest('prodotti?id=eq.' + ids.vaso, { token: S })); assert.equal(Number(p.giacenza), 10);
+    const [p] = okR(await rest('prodotti_vista?id=eq.' + ids.vaso, { token: S })); assert.equal(Number(p.giacenza), 10);
   });
   await prova('cambio password e vecchia password rifiutata', async () => {
     assert.equal((await auth('api/password', { method: 'POST', token: S, body: { attuale: 'sbagliata', nuova: 'NuovaPassword-99' } })).status, 400);

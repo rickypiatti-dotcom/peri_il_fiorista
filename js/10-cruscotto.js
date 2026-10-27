@@ -39,7 +39,8 @@
     const t = oggi();
     // feste entro il preavviso, con l'incasso della stessa settimana dell'anno scorso
     const vicine = feste.map((f) => ({ ...f, quando: FG.prossimaFesta(f) })).filter((f) => giorniTra(t, f.quando) <= f.preavviso).sort((a, b) => (a.quando < b.quando ? -1 : 1));
-    await Promise.all(vicine.map(async (f) => {
+    // incasso della settimana dell'anno scorso: solo il titolare (il commesso non vede gli incassi)
+    if (isOwner()) await Promise.all(vicine.map(async (f) => {
       const y = Number(f.quando.slice(0, 4)) - 1, d = FG.dataFesta(f, y);
       try {
         const r = await get(`entrate?select=totale_cent&data=gte.${addGiorni(d, -6)}&data=lte.${d}`);
@@ -50,19 +51,20 @@
 
     const ora = new Date().getHours();
     const saluto = ora < 13 ? 'Buongiorno' : ora < 18 ? 'Buon pomeriggio' : 'Buonasera';
-    const metodi = Object.entries(c.oggi_metodi || {}).map(([m, v]) => `${esc(m)} ${esc(eur(v))}`).join(' · ');
+    const metodi = isOwner() && Object.entries(c.oggi_metodi || {}).map(([m, v]) => `${esc(m)} ${esc(eur(v))}`).join(' · ');
     let h = `<header class="testa"><div><h1>${saluto}</h1><p class="muted">${esc(giorno(t).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</p></div>
       ${modulo('cassa') ? '<a class="btn primary" href="#/cassa">+ Nuova vendita</a>' : ''}</header>`;
 
-    h += '<section class="kpi">';
-    h += kpi('Incassato oggi', eur(c.oggi.totale), `${c.oggi.n} ${c.oggi.n === 1 ? 'incasso' : 'incassi'}${metodi ? ' · ' + metodi : ''}`);
-    h += kpi('Incassato nel mese', eur(c.mese_entrate), isOwner() && c.mese_anno_scorso ? `anno scorso nello stesso mese: ${eur(c.mese_anno_scorso)}` : '');
+    // incassi, spese e risultati: solo il titolare (il cruscotto del commesso non li riceve nemmeno)
     if (isOwner()) {
+      h += '<section class="kpi">';
+      h += kpi('Incassato oggi', eur(c.oggi.totale), `${c.oggi.n} ${c.oggi.n === 1 ? 'incasso' : 'incassi'}${metodi ? ' · ' + metodi : ''}`);
+      h += kpi('Incassato nel mese', eur(c.mese_entrate), c.mese_anno_scorso ? `anno scorso nello stesso mese: ${eur(c.mese_anno_scorso)}` : '');
       h += kpi('Uscite del mese', eur(c.mese_uscite), `costi fissi: circa ${eur0(c.costi_fissi_mese)} al mese`);
       const utile = c.mese_entrate - c.mese_uscite;
       h += kpi('Risultato del mese', eur(utile), 'incassi meno spese registrate', utile < 0 ? 'neg' : 'pos');
+      h += '</section>';
     }
-    h += '</section>';
 
     if (isOwner()) h += pareggio(c);
 

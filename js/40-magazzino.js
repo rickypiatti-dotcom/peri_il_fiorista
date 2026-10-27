@@ -23,18 +23,18 @@
     const vis = lista.filter((p) => (F.solo === 'disattivi' ? !p.attivo : p.attivo) && (!F.cat || String(p.categoria_id) === F.cat)
       && (!q || p.nome.toLowerCase().includes(q) || (p.codice || '').toLowerCase().includes(q) || (p.nome_botanico || '').toLowerCase().includes(q))
       && (F.solo !== 'scorta' || p.sotto_scorta) && (F.solo !== 'controllare' || p.da_controllare));
-    const valore = vis.reduce((a, p) => a + Number(p.valore_cent || 0), 0);
+    const valore = vis.reduce((a, p) => a + Number(p.valore_cent || 0), 0), tit = isOwner(); // costi, margini e valore: solo il titolare
     return `<header class="testa"><h1>Magazzino</h1><div class="azioni"><a class="btn" href="#/bolle/nuova">📦 Arrivo merce</a><button class="btn primary" type="button" id="a-nuovo">+ Articolo</button></div></header>${tabs('')}
       <form class="filtri" id="af"><label class="f"><span>Cerca</span><input type="search" name="cerca" value="${esc(F.cerca)}" placeholder="nome, codice, nome botanico"></label>
         <label class="f"><span>Categoria</span><select name="cat"><option value="">Tutte</option>${catDi('prodotto').map((c) => `<option value="${c.id}"${String(c.id) === F.cat ? ' selected' : ''}>${esc(c.nome)}</option>`).join('')}</select></label>
         <label class="f"><span>Mostra</span><select name="solo">${[['', 'Tutti gli attivi'], ['scorta', 'Sotto scorta'], ['controllare', 'Da controllare (deperibili)'], ['disattivi', 'Disattivati']].map(([k, t]) => `<option value="${k}"${k === F.solo ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
         <button type="button" class="btn sm" id="a-csv">Scarica CSV</button></form>
-      <p class="muted">${vis.length} articoli · valore al costo ${esc(eur(valore))}</p>
-      ${vis.length ? `<div class="tabella"><table><thead><tr><th>Articolo</th><th>Categoria</th><th class="n">Giacenza</th><th class="n">Costo</th><th class="n">Prezzo</th><th class="n">Margine</th><th class="n">Valore</th></tr></thead><tbody>
+      <p class="muted">${vis.length} articoli${tit ? ` · valore al costo ${esc(eur(valore))}` : ''}</p>
+      ${vis.length ? `<div class="tabella"><table><thead><tr><th>Articolo</th><th>Categoria</th><th class="n">Giacenza</th>${tit ? '<th class="n">Costo</th>' : ''}<th class="n">Prezzo</th>${tit ? '<th class="n">Margine</th><th class="n">Valore</th>' : ''}</tr></thead><tbody>
         ${vis.map((p) => `<tr data-id="${p.id}" tabindex="0"><td><b>${esc(p.nome)}</b>${p.nome_botanico ? `<br><small class="muted"><i>${esc(p.nome_botanico)}</i></small>` : ''}${p.codice ? `<br><small class="muted">${esc(p.codice)}</small>` : ''}</td>
           <td>${pallino(p.categoria_colore)}${esc(p.categoria || '—')}</td>
           <td class="n">${p.a_magazzino ? `<b class="${p.giacenza <= 0 ? 'neg' : p.sotto_scorta ? 'att' : ''}">${esc(num(p.giacenza))}</b> ${esc(p.unita)}${p.sotto_scorta ? '<br><small class="att">sotto scorta</small>' : ''}${p.da_controllare ? `<br><small class="neg">arrivati da ${p.giorni_da_carico} gg</small>` : ''}` : '<small class="muted">servizio</small>'}</td>
-          <td class="n">${esc(eur(p.prezzo_acquisto_cent))}</td><td class="n">${esc(eur(p.prezzo_vendita_cent))}</td><td class="n">${esc(perc(margine(p)))}</td><td class="n">${esc(eur(p.valore_cent))}</td></tr>`).join('')}
+          ${tit ? `<td class="n">${esc(eur(p.prezzo_acquisto_cent))}</td>` : ''}<td class="n">${esc(eur(p.prezzo_vendita_cent))}</td>${tit ? `<td class="n">${esc(perc(margine(p)))}</td><td class="n">${esc(eur(p.valore_cent))}</td>` : ''}</tr>`).join('')}
         </tbody></table></div>` : vuoto(lista.length ? 'Nessun articolo con questi filtri.' : 'Il magazzino è vuoto: aggiungi il primo articolo o registra un arrivo di merce.')}`;
   };
   VIEWS.magazzino.dopo = (v, args) => {
@@ -46,8 +46,11 @@
     f.cerca.oninput = () => { F.cerca = f.cerca.value; clearTimeout(f.t); f.t = setTimeout(() => { render(true).then(() => { const c = $('#af [name=cerca]'); if (c) { c.focus(); c.setSelectionRange(c.value.length, c.value.length); } }); }, 250); };
     f.onsubmit = (e) => e.preventDefault();
     $('#a-nuovo', v).onclick = () => articolo(null);
-    $('#a-csv', v).onclick = () => csv('magazzino_' + oggi(), ['Articolo', 'Codice', 'Categoria', 'Fornitore', 'Unità', 'Giacenza', 'Scorta minima', 'Costo (IVA esclusa)', 'Prezzo (IVA inclusa)', 'IVA %', 'Valore al costo', 'Attivo'],
-      VIEWS.magazzino.lista.map((p) => [p.nome, p.codice || '', p.categoria || '', p.fornitore || '', p.unita, numCsv(p.giacenza), numCsv(p.scorta), eurCsv(p.prezzo_acquisto_cent), eurCsv(p.prezzo_vendita_cent), numCsv(p.aliquota_iva), eurCsv(p.valore_cent), p.attivo ? 'sì' : 'no']));
+    $('#a-csv', v).onclick = () => (isOwner()
+      ? csv('magazzino_' + oggi(), ['Articolo', 'Codice', 'Categoria', 'Fornitore', 'Unità', 'Giacenza', 'Scorta minima', 'Costo (IVA esclusa)', 'Prezzo (IVA inclusa)', 'IVA %', 'Valore al costo', 'Attivo'],
+        VIEWS.magazzino.lista.map((p) => [p.nome, p.codice || '', p.categoria || '', p.fornitore || '', p.unita, numCsv(p.giacenza), numCsv(p.scorta), eurCsv(p.prezzo_acquisto_cent), eurCsv(p.prezzo_vendita_cent), numCsv(p.aliquota_iva), eurCsv(p.valore_cent), p.attivo ? 'sì' : 'no']))
+      : csv('magazzino_' + oggi(), ['Articolo', 'Codice', 'Categoria', 'Fornitore', 'Unità', 'Giacenza', 'Scorta minima', 'Prezzo (IVA inclusa)', 'IVA %', 'Attivo'],
+        VIEWS.magazzino.lista.map((p) => [p.nome, p.codice || '', p.categoria || '', p.fornitore || '', p.unita, numCsv(p.giacenza), numCsv(p.scorta), eurCsv(p.prezzo_vendita_cent), numCsv(p.aliquota_iva), p.attivo ? 'sì' : 'no'])));
     $$('tr[data-id]', v).forEach((tr) => (tr.onclick = tr.onkeydown = (e) => { if (e.type === 'keydown' && e.key !== 'Enter') return; articolo(VIEWS.magazzino.lista.find((p) => p.id === Number(tr.dataset.id))); }));
   };
 
@@ -57,7 +60,7 @@
     { k: 'fornitore_id', l: 'Fornitore abituale', t: 'select', num: true, o: fornOpz(), w: 2 },
     { k: 'unita', l: 'Unità', t: 'select', vuoto: false, o: S.imp.unita.map((u) => [u, u]), w: 2 },
     { sez: 'Prezzi' },
-    { k: 'prezzo_acquisto_cent', l: 'Costo d\'acquisto (IVA esclusa)', t: 'money', w: 3, help: 'si aggiorna da solo con l\'ultima bolla' },
+    ...(isOwner() ? [{ k: 'prezzo_acquisto_cent', l: 'Costo d\'acquisto (IVA esclusa)', t: 'money', w: 3, help: 'si aggiorna da solo con l\'ultima bolla' }] : []),
     { k: 'aliquota_iva', l: 'IVA', t: 'select', vuoto: false, o: [[10, '10% (piante e fiori)'], [22, '22% (vasi, accessori)'], [4, '4%'], [5, '5%'], [0, '0%']], w: 3 },
     { k: 'prezzo_vendita_cent', l: 'Prezzo di vendita (IVA inclusa)', t: 'money', w: 3 },
     { sez: 'Magazzino' },
@@ -94,6 +97,7 @@
     d.classList.add('largo');
     const f = d.querySelector('form'), sugg = d.querySelector('#a-sugg');
     const aggiorna = () => {
+      if (!f.prezzo_acquisto_cent) return; // commesso: niente costi né margini
       const c = cent(f.prezzo_acquisto_cent.value), v = cent(f.prezzo_vendita_cent.value), al = Number(f.aliquota_iva.value);
       const s = consigliato(c, al);
       const m = v > 0 && c >= 0 ? (v / (1 + al / 100) - c) / (v / (1 + al / 100)) : null;
@@ -137,23 +141,24 @@
     if (M.tipo) q += '&tipo=eq.' + M.tipo;
     const lista = await get(q);
     movimenti.lista = lista;
-    const perdite = lista.filter((m) => m.tipo === 'scarto').reduce((a, m) => a + Math.round(-m.quantita * (m.costo_unit_cent || 0)), 0);
+    const perdite = lista.filter((m) => m.tipo === 'scarto').reduce((a, m) => a + Math.round(-m.quantita * (m.costo_unit_cent || 0)), 0), tit = isOwner();
     return `<header class="testa"><h1>Magazzino</h1><button class="btn primary" type="button" id="m-scarto">+ Registra scarto</button></header>${tabs('movimenti')}
       <form class="filtri" id="mf"><label class="f"><span>Dal</span><input type="date" name="da" value="${M.da}"></label><label class="f"><span>Al</span><input type="date" name="a" value="${M.a}"></label>
         <label class="f"><span>Tipo</span><select name="tipo"><option value="">Tutti</option>${Object.entries(TIPI).map(([k, t]) => `<option value="${k}"${k === M.tipo ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
         <button type="button" class="btn sm" id="m-csv"${lista.length ? '' : ' disabled'}>Scarica CSV</button></form>
-      <p class="muted">${lista.length} movimenti · scarti nel periodo: <b class="neg">${esc(eur(perdite))}</b> (al costo)</p>
-      ${lista.length ? `<div class="tabella"><table><thead><tr><th>Data</th><th>Articolo</th><th>Tipo</th><th class="n">Quantità</th><th class="n">Valore</th></tr></thead><tbody>
+      <p class="muted">${lista.length} movimenti${tit ? ` · scarti nel periodo: <b class="neg">${esc(eur(perdite))}</b> (al costo)` : ''}</p>
+      ${lista.length ? `<div class="tabella"><table><thead><tr><th>Data</th><th>Articolo</th><th>Tipo</th><th class="n">Quantità</th>${tit ? '<th class="n">Valore</th>' : ''}</tr></thead><tbody>
         ${lista.map((m) => `<tr><td>${esc(dataIt(m.data))}</td><td>${esc(m.prodotto)}<br><small class="muted">${esc(m.categoria || '')}</small></td>
           <td>${esc(TIPI[m.tipo])}${m.motivo ? `<br><small class="muted">${esc(m.motivo)}</small>` : ''}${m.bolla_id ? `<br><a class="link" href="#/bolle/${m.bolla_id}">bolla ${esc(m.bolla_numero || '')}${m.fornitore ? ' · ' + esc(m.fornitore) : ''}</a>` : ''}</td>
-          <td class="n ${m.quantita < 0 ? 'neg' : 'pos'}">${m.quantita > 0 ? '+' : ''}${esc(num(m.quantita))} ${esc(m.unita)}</td><td class="n">${esc(eur(Math.round(Math.abs(m.quantita) * (m.costo_unit_cent || 0))))}</td></tr>`).join('')}
+          <td class="n ${m.quantita < 0 ? 'neg' : 'pos'}">${m.quantita > 0 ? '+' : ''}${esc(num(m.quantita))} ${esc(m.unita)}</td>${tit ? `<td class="n">${esc(eur(Math.round(Math.abs(m.quantita) * (m.costo_unit_cent || 0))))}</td>` : ''}</tr>`).join('')}
         </tbody></table></div>` : vuoto('Nessun movimento nel periodo.')}`;
   }
   function collegaMovimenti(v) {
     const f = $('#mf', v);
     f.onchange = () => { M.da = f.da.value || M.da; M.a = f.a.value || M.a; M.tipo = f.tipo.value; render(true); };
-    $('#m-csv', v).onclick = () => csv(`movimenti_${M.da}_${M.a}`, ['Data', 'Articolo', 'Categoria', 'Tipo', 'Quantità', 'Unità', 'Costo unitario', 'Motivo', 'Bolla', 'Fornitore'],
-      movimenti.lista.map((m) => [m.data, m.prodotto, m.categoria || '', TIPI[m.tipo], numCsv(m.quantita), m.unita, eurCsv(m.costo_unit_cent), m.motivo || '', m.bolla_numero || '', m.fornitore || '']));
+    const tit = isOwner();
+    $('#m-csv', v).onclick = () => csv(`movimenti_${M.da}_${M.a}`, ['Data', 'Articolo', 'Categoria', 'Tipo', 'Quantità', 'Unità', ...(tit ? ['Costo unitario'] : []), 'Motivo', 'Bolla', 'Fornitore'],
+      movimenti.lista.map((m) => [m.data, m.prodotto, m.categoria || '', TIPI[m.tipo], numCsv(m.quantita), m.unita, ...(tit ? [eurCsv(m.costo_unit_cent)] : []), m.motivo || '', m.bolla_numero || '', m.fornitore || '']));
     $('#m-scarto', v).onclick = async () => {
       const prodotti = await get('prodotti?attivo=is.true&a_magazzino=is.true&order=nome&select=id,nome,giacenza,unita');
       const d = apri(`<h2>Registra uno scarto</h2><label class="f"><span>Articolo</span><select id="ms-p"><option value="">Scegli…</option>${prodotti.map((p) => `<option value="${p.id}">${esc(p.nome)} (${esc(num(p.giacenza))} ${esc(p.unita)})</option>`).join('')}</select></label>`, 'piccolo');
@@ -232,15 +237,16 @@
     if (B.stato === 'aperte') q += '&spesa_id=is.null'; else if (B.stato === 'fatturate') q += '&spesa_id=not.is.null';
     const lista = await get(q);
     VIEWS.bolle.lista = lista;
+    const tit = isOwner(); // totali e fatture: solo il titolare
     return `<header class="testa"><h1>Arrivi e bolle</h1><a class="btn primary" href="#/bolle/nuova">📦 Arrivo merce</a></header>
       <form class="filtri" id="bf"><label class="f"><span>Fornitore</span><select name="fornitore"><option value="">Tutti</option>${S.fornitori.map((f) => `<option value="${f.id}"${String(f.id) === B.fornitore ? ' selected' : ''}>${esc(f.nome)}</option>`).join('')}</select></label>
-        <label class="f"><span>Fattura</span><select name="stato">${[['', 'Tutte'], ['aperte', 'Senza fattura'], ['fatturate', 'Con fattura']].map(([k, t]) => `<option value="${k}"${k === B.stato ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
+        <label class="f"${tit ? '' : ' hidden'}><span>Fattura</span><select name="stato">${[['', 'Tutte'], ['aperte', 'Senza fattura'], ['fatturate', 'Con fattura']].map(([k, t]) => `<option value="${k}"${k === B.stato ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
         ${isOwner() ? '<button type="button" class="btn sm" id="b-fattura" disabled>🧾 Collega una fattura alle bolle scelte</button>' : ''}</form>
-      ${lista.length ? `<div class="tabella"><table><thead><tr>${isOwner() ? '<th></th>' : ''}<th>Arrivata</th><th>Fornitore</th><th>Bolla</th><th class="n">Righe</th><th class="n">Totale</th><th>Fattura</th></tr></thead><tbody>
+      ${lista.length ? `<div class="tabella"><table><thead><tr>${isOwner() ? '<th></th>' : ''}<th>Arrivata</th><th>Fornitore</th><th>Bolla</th><th class="n">Righe</th>${tit ? '<th class="n">Totale</th><th>Fattura</th>' : ''}</tr></thead><tbody>
         ${lista.map((b) => `<tr data-id="${b.id}" tabindex="0">${isOwner() ? `<td>${b.spesa_id ? '' : `<input type="checkbox" data-sel="${b.id}" data-f="${b.fornitore_id || 0}" aria-label="Scegli">`}</td>` : ''}
           <td>${esc(dataIt(b.data_arrivo))}</td><td>${esc(b.fornitore || '—')}</td><td>${esc(b.numero || '—')}${b.data_documento ? `<br><small class="muted">del ${esc(dataIt(b.data_documento))}</small>` : ''}${b.allegati ? ' 📎' : ''}</td>
-          <td class="n">${b.righe}</td><td class="n">${esc(eur(b.lordo_cent))}<br><small class="muted">${esc(eur(b.netto_cent))} + IVA</small></td>
-          <td>${b.spesa_id ? pill('collegata', 'pos') : pill('da collegare', 'att')}</td></tr>`).join('')}</tbody></table></div>` : vuoto('Nessuna bolla registrata.', '<a class="btn primary" href="#/bolle/nuova">Registra il primo arrivo</a>')}`;
+          <td class="n">${b.righe}</td>${tit ? `<td class="n">${esc(eur(b.lordo_cent))}<br><small class="muted">${esc(eur(b.netto_cent))} + IVA</small></td>
+          <td>${b.spesa_id ? pill('collegata', 'pos') : pill('da collegare', 'att')}</td>` : ''}</tr>`).join('')}</tbody></table></div>` : vuoto('Nessuna bolla registrata.', '<a class="btn primary" href="#/bolle/nuova">Registra il primo arrivo</a>')}`;
   };
   VIEWS.bolle.dopo = (v, args) => {
     if (args[0] === 'nuova') return collegaNuovaBolla(v);
@@ -262,7 +268,7 @@
   // ------------------------------------------------------------ nuova bolla / arrivo merce
   let prodBolla = [];
   async function nuovaBolla() {
-    prodBolla = await get('prodotti?attivo=is.true&a_magazzino=is.true&order=nome&select=id,nome,unita,prezzo_acquisto_cent,aliquota_iva,fornitore_id,categoria_id');
+    prodBolla = await get('prodotti_vista?attivo=is.true&a_magazzino=is.true&order=nome&select=id,nome,unita,prezzo_acquisto_cent,aliquota_iva,fornitore_id,categoria_id');
     const bozza = FG.bozzaBolla || { righe: [] }; FG.bozzaBolla = null;
     nuovaBolla.righe = bozza.righe.length ? bozza.righe : [{ prodotto_id: null, quantita: null, costo: null }];
     const catSpesa = catDi('spesa').find((c) => c.nome.toLowerCase() === 'acquisto merce');
@@ -273,7 +279,7 @@
         <label class="f w2"><span>Data della bolla</span><input type="date" name="data_documento" max="${oggi()}"></label>
         <label class="f w2"><span>Arrivata il *</span><input type="date" name="data" value="${oggi()}" max="${oggi()}" required></label>
         <label class="f"><span>Nota</span><input name="nota" maxlength="1000" placeholder="es. 2 scatole danneggiate, manca 1 vaso"></label></div>
-      <h3 class="sez">Articoli arrivati <small class="muted">(costo IVA esclusa, come sulla bolla)</small></h3>
+      <h3 class="sez">Articoli arrivati ${isOwner() ? '<small class="muted">(costo IVA esclusa, come sulla bolla)</small>' : ''}</h3>
       <div id="nb-righe"></div>
       <div class="azioni sinistra"><button type="button" class="btn sm" id="nb-piu">+ Riga</button><button type="button" class="btn sm" id="nb-nuovo">+ Articolo nuovo</button>
         <span class="spazio"></span><span id="nb-tot"></span></div>
@@ -289,12 +295,12 @@
       <p class="alert err" hidden></p><div class="azioni"><a class="btn" href="#/bolle">Annulla</a><button class="btn primary big" type="submit">Carica in magazzino</button></div></form>`;
   }
   function collegaNuovaBolla(v) {
-    const f = $('#nb', v), righe = nuovaBolla.righe, err = f.querySelector('.alert');
+    const f = $('#nb', v), righe = nuovaBolla.righe, err = f.querySelector('.alert'), tit = isOwner(); // il commesso: articoli e quantità, niente costi
     const opz = (sel) => prodBolla.map((p) => `<option value="${p.id}"${p.id === sel ? ' selected' : ''}>${esc(p.nome)} (${esc(p.unita)})</option>`).join('');
     const disegna = () => {
       $('#nb-righe', v).innerHTML = righe.map((r, i) => `<div class="voce"><select data-rp="${i}" aria-label="Articolo"><option value="">Scegli l'articolo…</option>${opz(r.prodotto_id)}</select>
         <input data-rq="${i}" class="q" inputmode="decimal" placeholder="q.tà" value="${esc(r.quantita == null ? '' : String(r.quantita).replace('.', ','))}" aria-label="Quantità">
-        <div class="euro sm"><input data-rc="${i}" inputmode="decimal" placeholder="costo" value="${esc(euroInput(r.costo))}" aria-label="Costo unitario"><span>€</span></div>
+        ${tit ? `<div class="euro sm"><input data-rc="${i}" inputmode="decimal" placeholder="costo" value="${esc(euroInput(r.costo))}" aria-label="Costo unitario"><span>€</span></div>` : ''}
         <button type="button" class="link neg" data-rx="${i}" aria-label="Togli">✕</button></div>`).join('');
       $$('[data-rp]', v).forEach((s) => (s.onchange = () => { const r = righe[s.dataset.rp], p = prodBolla.find((x) => String(x.id) === s.value); r.prodotto_id = p ? p.id : null; if (p && r.costo == null) r.costo = p.prezzo_acquisto_cent || null; disegna(); }));
       $$('[data-rq]', v).forEach((s) => (s.oninput = () => { righe[s.dataset.rq].quantita = qty(s.value); totali(); }));
@@ -307,7 +313,7 @@
       for (const r of righe) { const p = prodBolla.find((x) => x.id === r.prodotto_id); if (p && r.quantita > 0 && r.costo > 0) { const t = r.quantita * r.costo; netto += t; iva += (t * Number(p.aliquota_iva)) / 100; } }
       return { netto: Math.round(netto), iva: Math.round(iva) };
     };
-    const totali = () => { const { netto, iva } = calcola(); $('#nb-tot', v).innerHTML = `Imponibile <b>${esc(eur(netto))}</b> · IVA ${esc(eur(iva))} · totale <b>${esc(eur(netto + iva))}</b>`; };
+    const totali = () => { if (!tit) return; const { netto, iva } = calcola(); $('#nb-tot', v).innerHTML = `Imponibile <b>${esc(eur(netto))}</b> · IVA ${esc(eur(iva))} · totale <b>${esc(eur(netto + iva))}</b>`; };
     disegna();
     f.fornitore_id.onchange = () => { // fornitore scelto: gli articoli suoi in cima
       const id = Number(f.fornitore_id.value) || null;
@@ -352,7 +358,7 @@
           const file = f.file.files[0];
           if (file && file.size > 8 * 1024 * 1024) throw new Error('Il file è troppo grande (massimo 8 MB)');
           const p = { fornitore_id: Number(f.fornitore_id.value) || null, numero_documento: f.numero.value, data_documento: f.data_documento.value || null, data: f.data.value || oggi(),
-            nota: f.nota.value, righe: buone.map((r) => ({ prodotto_id: r.prodotto_id, quantita: r.quantita, costo_unit_cent: r.costo ?? null })) };
+            nota: f.nota.value, righe: buone.map((r) => ({ prodotto_id: r.prodotto_id, quantita: r.quantita, costo_unit_cent: tit ? r.costo ?? null : null })) };
           if (f.con_spesa && f.con_spesa.checked) {
             const imp = cent(f.sp_imp.value); if (Number.isNaN(imp)) throw new Error('Importo della spesa non valido');
             const { netto, iva } = calcola();
@@ -374,14 +380,15 @@
     let spesa = null;
     if (b.spesa_id && isOwner()) [spesa] = await get('spese?id=eq.' + b.spesa_id + '&select=id,descrizione,importo_cent,pagata,numero_documento');
     bolla.b = b;
+    const tit = isOwner(); // costi, totali e fattura: solo il titolare
     return `<header class="testa"><div><a class="link" href="#/bolle">← Arrivi e bolle</a><h1>Bolla ${esc(b.numero || 'senza numero')} · ${esc(b.fornitore || 'fornitore non indicato')}</h1></div>
       <div class="azioni">${isOwner() && !b.spesa_id ? '<button class="btn" data-a="fattura">🧾 Collega fattura</button>' : ''}<button class="btn" data-a="modifica">Modifica dati</button></div></header>
       <div class="colonne2"><section class="card"><dl class="dati"><dt>Arrivata il</dt><dd>${esc(dataIt(b.data_arrivo))}</dd>${b.data_documento ? `<dt>Data della bolla</dt><dd>${esc(dataIt(b.data_documento))}</dd>` : ''}
         ${b.nota ? `<dt>Nota</dt><dd>${esc(b.nota)}</dd>` : ''}<dt>Inserita</dt><dd>${esc(quando(b.creato_il))}</dd>
-        <dt>Fattura</dt><dd>${spesa ? `<a href="#/spese/${spesa.id}">${esc(spesa.descrizione)}${spesa.numero_documento ? ' n. ' + esc(spesa.numero_documento) : ''}</a> · ${esc(eur(spesa.importo_cent))} ${spesa.pagata ? pill('pagata', 'pos') : pill('da pagare', 'att')}` : b.spesa_id ? 'collegata' : pill('non ancora collegata', 'att')}</dd></dl>
-        <table class="mini"><thead><tr><th>Articolo</th><th class="n">Quantità</th><th class="n">Costo</th><th class="n">Totale</th></tr></thead><tbody>
-        ${righe.map((m) => `<tr><td>${esc(m.prodotto)}</td><td class="n">${esc(num(m.quantita))} ${esc(m.unita)}</td><td class="n">${esc(eur(m.costo_unit_cent))}</td><td class="n">${esc(eur(Math.round(m.quantita * (m.costo_unit_cent || 0))))}</td></tr>`).join('')}</tbody></table>
-        <p class="carr-totale"><span>Imponibile ${esc(eur(b.netto_cent))}</span><b>${esc(eur(b.lordo_cent))}</b></p></section>
+        ${tit ? `<dt>Fattura</dt><dd>${spesa ? `<a href="#/spese/${spesa.id}">${esc(spesa.descrizione)}${spesa.numero_documento ? ' n. ' + esc(spesa.numero_documento) : ''}</a> · ${esc(eur(spesa.importo_cent))} ${spesa.pagata ? pill('pagata', 'pos') : pill('da pagare', 'att')}` : b.spesa_id ? 'collegata' : pill('non ancora collegata', 'att')}</dd>` : ''}</dl>
+        <table class="mini"><thead><tr><th>Articolo</th><th class="n">Quantità</th>${tit ? '<th class="n">Costo</th><th class="n">Totale</th>' : ''}</tr></thead><tbody>
+        ${righe.map((m) => `<tr><td>${esc(m.prodotto)}</td><td class="n">${esc(num(m.quantita))} ${esc(m.unita)}</td>${tit ? `<td class="n">${esc(eur(m.costo_unit_cent))}</td><td class="n">${esc(eur(Math.round(m.quantita * (m.costo_unit_cent || 0))))}</td>` : ''}</tr>`).join('')}</tbody></table>
+        ${tit ? `<p class="carr-totale"><span>Imponibile ${esc(eur(b.netto_cent))}</span><b>${esc(eur(b.lordo_cent))}</b></p>` : ''}</section>
       <section class="card"><h2>📎 Foto e documenti</h2>${all.length ? `<ul class="lista compatta">${all.map((a) => `<li><button type="button" class="link" data-all="${esc(a.id)}">${esc(a.nome)}</button> <small class="muted">${Math.round(a.dimensione / 1024)} KB</small> <button type="button" class="link neg" data-togli="${esc(a.id)}">togli</button></li>`).join('')}</ul>` : '<p class="muted">Nessuna foto.</p>'}
         <label class="f"><span>Aggiungi foto o PDF</span><input type="file" id="b-file" accept="image/*,application/pdf" capture="environment"></label></section></div>
       <div class="azioni sinistra"><button class="btn danger ghost sm" data-a="annulla">Annulla la bolla</button></div>`;

@@ -256,11 +256,13 @@
     b.onclick = () => occupato(b, async () => {
       const tabelle = ['impostazioni', 'categorie', 'fornitori', 'clienti', 'ricorrenze', 'prodotti', 'ricette', 'ricetta_righe', 'bolle', 'movimenti', 'entrate', 'entrata_righe',
         'ordini', 'ordine_righe', 'spese', 'ricorrenti', 'chiusure', 'calendario'];
+      // tabelle con colonne di costo: le colonne complete (costi compresi) il titolare le legge dalle viste
+      const VISTA = { prodotti: 'prodotti_vista', ricette: 'ricette_vista', movimenti: 'movimenti_vista', entrata_righe: 'entrata_righe_vista' };
       const out = { esportato_il: new Date().toISOString(), attivita: S.imp.nome_attivita };
       try {
         for (const t of tabelle) {
           out[t] = [];
-          for (let da = 0; ; da += 5000) { const r = await get(`${t}?order=id&limit=5000&offset=${da}`); out[t].push(...r); if (r.length < 5000) break; }
+          for (let da = 0; ; da += 5000) { const r = await get(`${VISTA[t] || t}?order=id&limit=5000&offset=${da}`); out[t].push(...r); if (r.length < 5000) break; }
         }
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' }));

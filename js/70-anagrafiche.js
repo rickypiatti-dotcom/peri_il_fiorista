@@ -36,7 +36,7 @@
 
   async function cliente(id) {
     const [[c], ric, ordini, entrate] = await Promise.all([get('clienti?id=eq.' + id), get('ricorrenze?cliente_id=eq.' + id + '&order=mese,giorno'),
-      get('ordini_vista?cliente_id=eq.' + id + '&order=data_consegna.desc&limit=50'), get('entrate?cliente_id=eq.' + id + '&select=totale_cent,data&order=data.desc')]);
+      get('ordini_vista?cliente_id=eq.' + id + '&order=data_consegna.desc&limit=50'), isOwner() ? get('entrate?cliente_id=eq.' + id + '&select=totale_cent,data&order=data.desc') : []]);
     if (!c) return vuoto('Cliente non trovato.');
     VIEWS.clienti.c = c;
     const speso = entrate.reduce((a, e) => a + e.totale_cent, 0);
@@ -45,7 +45,7 @@
         ${c.telefono ? `<dt>Telefono</dt><dd><a href="tel:${esc(c.telefono.replace(/\s/g, ''))}">${esc(c.telefono)}</a> · <a target="_blank" rel="noopener noreferrer" href="https://wa.me/${esc(c.telefono.replace(/[^\d]/g, '').replace(/^(?!39)(3\d{8,9})$/, '39$1'))}">WhatsApp</a></dd>` : ''}
         ${c.email ? `<dt>Email</dt><dd><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></dd>` : ''}${c.indirizzo ? `<dt>Indirizzo</dt><dd>${esc(c.indirizzo)}</dd>` : ''}
         ${c.cf_piva ? `<dt>CF / P.IVA</dt><dd>${esc(c.cf_piva)}</dd>` : ''}${c.note ? `<dt>Note</dt><dd>${esc(c.note)}</dd>` : ''}
-        <dt>Ha speso</dt><dd><b>${esc(eur(speso))}</b> in ${entrate.length} incassi${entrate[0] ? ` · ultimo ${esc(dataIt(entrate[0].data))}` : ''}</dd></dl></section>
+        ${isOwner() ? `<dt>Ha speso</dt><dd><b>${esc(eur(speso))}</b> in ${entrate.length} incassi${entrate[0] ? ` · ultimo ${esc(dataIt(entrate[0].data))}` : ''}</dd>` : ''}</dl></section>
       <section class="card"><h2>🎂 Ricorrenze da ricordare</h2>${ric.length ? `<ul class="lista compatta">${ric.map((r) => `<li>${esc(r.giorno)} ${esc(MESI_LUNGHI[r.mese - 1])}: <b>${esc(r.descrizione)}</b> <small class="muted">avviso ${r.preavviso} giorni prima</small> <button type="button" class="link neg" data-xr="${r.id}">togli</button></li>`).join('')}</ul>` : '<p class="muted">Nessuna. Es. «anniversario di matrimonio», «compleanno della moglie».</p>'}
         <form id="cl-ric" class="grid-form" novalidate><label class="f"><span>Cosa</span><input name="d" maxlength="120" placeholder="es. Anniversario di matrimonio"></label>
           <label class="f w3"><span>Giorno</span><input name="g" inputmode="numeric" maxlength="2"></label>
