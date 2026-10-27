@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#2f5d50">
+<title>Gestionale</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+<section id="login" class="login" hidden>
+  <form id="login-form" class="card login-card" autocomplete="on">
+    <img src="/favicon.svg" alt="" width="64" height="64">
+    <h1 id="login-nome">Gestionale</h1>
+    <label class="f"><span>Email</span><input id="l-email" type="email" autocomplete="username" required></label>
+    <label class="f"><span>Password</span><input id="l-pass" type="password" autocomplete="current-password" required></label>
+    <button class="btn primary block" type="submit" id="l-btn">Entra</button>
+    <p id="l-err" class="alert err" role="alert" hidden></p>
+  </form>
+</section>
+
+<div id="app" class="app" hidden>
+  <aside class="side" id="side">
+    <div class="brand"><img src="/favicon.svg" alt="" width="34" height="34"><b id="brand-nome">Gestionale</b></div>
+    <nav id="nav" aria-label="Sezioni"></nav>
+    <div class="who"><span id="who"></span><button id="logout" class="link" type="button">Esci</button></div>
+  </aside>
+  <header class="top">
+    <button id="menu-btn" class="icon-btn" type="button" aria-label="Menu" aria-expanded="false">☰</button>
+    <b id="top-nome">Gestionale</b>
+    <button id="nuova-vendita" class="btn primary sm" type="button">＋ Vendita</button>
+  </header>
+  <main id="view" class="main" tabindex="-1"></main>
+</div>
+
+<div id="modal" class="modal" hidden></div>
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<script src="/js/00-base.js"></script>
+<script src="/js/05-grafici.js"></script>
+<script src="/js/10-cruscotto.js"></script>
+<script src="/js/20-cassa.js"></script>
+<script src="/js/30-ordini.js"></script>
+<script src="/js/40-magazzino.js"></script>
+<script src="/js/45-ricette.js"></script>
+<script src="/js/50-spese.js"></script>
+<script src="/js/60-statistiche.js"></script>
+<script src="/js/70-anagrafiche.js"></script>
+<script src="/js/80-impostazioni.js"></script>
+<script src="/js/99-avvio.js"></script>
+</body>
+</html>

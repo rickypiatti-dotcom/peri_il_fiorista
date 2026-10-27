@@ -1,0 +1,8 @@
+.claude/
+*.zip
+.DS_Store
+node_modules
+tests/.app/
+tests/postgrest
+tests/*.tar.xz
+tests/shots/

@@ -1,0 +1,84 @@
+# Gestionale del fiorista su plateslab: magazzino, bolle, cassa, ordini, spese, statistiche. Database PostgreSQL.
+# Coolify: Docker Compose da GitHub (ramo main), location /docker-compose.yml.
+# Variabili da creare in Coolify (MAI nel repository):
+#   SERVICE_PASSWORD_POSTGRES, SERVICE_PASSWORD_AUTHENTICATOR, SERVICE_PASSWORD_64_JWT  (password lunghe, "Do not interpolate")
+#   ADMIN_EMAIL, ADMIN_PASSWORD   primo utente titolare (password forte, almeno 10 caratteri); gli altri utenti si creano dal gestionale
+# Dominio in Coolify: SOLO sul servizio "web" (porta 80), sempre con http://
+services:
+  db:
+    build: ./db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: fiorista
+      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_POSTGRES}
+      AUTHENTICATOR_PASSWORD: ${SERVICE_PASSWORD_AUTHENTICATOR}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d fiorista"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  postgrest:
+    image: postgrest/postgrest:v12.2.3
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${SERVICE_PASSWORD_AUTHENTICATOR}@db:5432/fiorista
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${SERVICE_PASSWORD_64_JWT}
+      PGRST_DB_MAX_ROWS: "5000"
+      PGRST_OPENAPI_MODE: disabled
+      PGRST_SERVER_PORT: "3000"
+
+  auth:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://postgres:${SERVICE_PASSWORD_POSTGRES}@db:5432/fiorista
+      JWT_SECRET: ${SERVICE_PASSWORD_64_JWT}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      # Con il tunnel Cloudflare l'IP vero del visitatore è in CF-Connecting-IP (limite dei tentativi di login per persona).
+      # In prova (solo VPN) non cambia nulla.
+      TRUST_CF_HEADER: "1"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    restart: unless-stopped
+    depends_on:
+      - postgrest
+      - auth
+    expose:
+      - "80"
+    # Porta riservata al SOLO server (127.0.0.1): per un eventuale Tailscale Funnel senza passare da Traefik.
+    ports:
+      - "127.0.0.1:8094:80"
+
+  # Pannello del database: SOLO dall'indirizzo Tailscale di plateslab (http://100.112.89.10:8089).
+  # Accesso: PostgreSQL, server "db", utente "postgres", database "fiorista", password = SERVICE_PASSWORD_POSTGRES.
+  adminer:
+    image: adminer:5
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    ports:
+      - "100.112.89.10:8089:8080"
+
+volumes:
+  pgdata:

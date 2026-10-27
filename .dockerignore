@@ -1,0 +1,7 @@
+.git
+.claude
+*.zip
+.DS_Store
+tests
+tools
+node_modules
