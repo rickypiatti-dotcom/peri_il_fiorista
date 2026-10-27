@@ -18,6 +18,9 @@ tar xf postgrest.tar.xz   # crea ./postgrest
 - `CHROME` = `~/.cache/ms-playwright/chromium-1247/chrome-linux64/chrome`, `LD_LIBRARY_PATH=~/.local/opt/pw-libs/usr/lib/x86_64-linux-gnu`
 - `NGINX` e `MIME` = `nginx` e `mime.types` estratti con `apt-get download nginx nginx-common` + `dpkg -x`
 
+`grafici-anteprima.mjs` riempie 12 mesi di dati finti e fotografa i grafici. La guida in PDF si rifà con `node ../docs/guida/schermate.mjs` (schermate) e `node ../docs/guida/pdf.mjs` (stampa), stesse variabili.
+Se una prova si interrompe a metà può lasciare PostgREST acceso sulla porta 3110: `stack.mjs` ora si ferma subito e dice quale porta è occupata.
+
 `ambiente.mjs` prepara stack + nginx + Chromium per le prove nel browser (riusabile per altre suite).
 
 Lezioni: la CSP del sito vieta `eval`, quindi niente `page.waitForFunction` (si usano `waitForSelector` ed `evaluate`);

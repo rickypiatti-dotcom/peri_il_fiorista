@@ -32,7 +32,7 @@ ${conf} }`);
   const db = stack.adminDb(); await db.connect();
   const q = async (sql, p) => (await db.query(sql, p)).rows;
   const { chromium } = createRequire(import.meta.url)(process.env.PW || 'playwright-core');
-  const browser = await chromium.launch({ executablePath: process.env.CHROME, args: ['--no-sandbox', '--disable-gpu'] });
+  const browser = await chromium.launch({ executablePath: process.env.CHROME, args: ['--no-sandbox', '--disable-gpu', '--lang=it-IT'] });
   const problemi = [];
 
   async function nuova({ telefono = false } = {}) {

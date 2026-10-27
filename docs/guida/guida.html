@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Il gestionale del fiorista · Guida all'uso</title>
+<style>
+  :root { --tema: #2f5d50; --accento: #d9737f; --chiaro: #e3ece8; --rosa: #f9e3e5; --testo: #22302b; --tenue: #66706a; --bordo: #e2ded5; }
+  @page { size: A4; margin: 18mm 17mm 20mm; }
+  @page :first { margin: 0; }
+  * { box-sizing: border-box; }
+  body { font: 10.4pt/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: var(--testo); margin: 0; }
+  h1, h2, h3 { line-height: 1.2; color: var(--tema); }
+  h1 { font-size: 21pt; margin: 0 0 4mm; padding-bottom: 2.5mm; border-bottom: 2px solid var(--accento); break-after: avoid; }
+  h2 { font-size: 13.5pt; margin: 7mm 0 2mm; break-after: avoid; }
+  h3 { font-size: 11pt; margin: 5mm 0 1.5mm; color: var(--testo); break-after: avoid; }
+  p { margin: 0 0 2.6mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 5.5mm; }
+  li { margin-bottom: 1mm; }
+  b { color: #16231e; }
+  .capitolo { break-before: page; }
+  .num { color: var(--accento); margin-right: 2.5mm; }
+  figure { margin: 3mm 0 5mm; break-inside: avoid; }
+  /* nessuna immagine più alta di una pagina: le finestre lunghe si rimpiccioliscono invece di spezzarsi */
+  figure img { display: block; width: auto; max-width: 100%; max-height: 215mm; margin: 0 auto; border: 1px solid var(--bordo); border-radius: 2.5mm; }
+  figure.media img { max-width: 72%; }
+  figure.piccola img { max-width: 52%; }
+  figcaption { font-size: 8.6pt; color: var(--tenue); text-align: center; margin-top: 1.5mm; }
+  .telefoni { display: flex; gap: 5mm; justify-content: center; break-inside: avoid; margin: 3mm 0 5mm; }
+  .telefoni figure { margin: 0; width: 31%; }
+  .box { border-radius: 3mm; padding: 3.5mm 4.5mm; margin: 3mm 0 4mm; break-inside: avoid; }
+  .box.consiglio { background: var(--chiaro); }
+  .box.attenzione { background: var(--rosa); }
+  .box > b:first-child { display: block; margin-bottom: 1mm; color: var(--tema); }
+  .box.attenzione > b:first-child { color: #9b3d48; }
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 4mm; font-size: 9.4pt; break-inside: avoid; }
+  th, td { text-align: left; padding: 1.6mm 2.2mm; border-bottom: 1px solid var(--bordo); vertical-align: top; }
+  th { background: #f6f4ef; font-size: 8.6pt; text-transform: uppercase; letter-spacing: .03em; color: var(--tenue); }
+  .passi { counter-reset: p; list-style: none; padding: 0; }
+  .passi li { counter-increment: p; position: relative; padding-left: 9mm; margin-bottom: 2mm; }
+  .passi li::before { content: counter(p); position: absolute; left: 0; top: -.2mm; width: 6mm; height: 6mm; border-radius: 50%; background: var(--tema); color: #fff;
+    font-size: 8.5pt; font-weight: 700; display: grid; place-items: center; }
+  kbd { font: inherit; font-weight: 600; background: #f3f1ec; border: 1px solid var(--bordo); border-radius: 1.2mm; padding: 0 1.4mm; white-space: nowrap; }
+
+  /* copertina */
+  .copertina { height: 297mm; padding: 34mm 22mm; color: #fff; background: radial-gradient(circle at 85% 12%, #d9737f55, transparent 45%), linear-gradient(160deg, #2f5d50, #1f4037);
+    display: flex; flex-direction: column; }
+  .copertina .fiore { font-size: 46pt; }
+  .copertina h1 { color: #fff; border: 0; font-size: 34pt; margin: 8mm 0 3mm; }
+  .copertina .sotto { font-size: 15pt; opacity: .9; max-width: 140mm; }
+  .copertina .cosa { margin-top: auto; font-size: 10.5pt; opacity: .88; line-height: 1.7; }
+  .copertina .cosa b { color: #fff; }
+
+  /* indice */
+  .indice ol { list-style: none; padding: 0; margin: 0; }
+  .indice > ol > li { margin: 0 0 2.4mm; break-inside: avoid; }
+  .indice > ol > li > a { font-weight: 700; font-size: 11pt; }
+  .indice a { color: var(--testo); text-decoration: none; }
+  .indice ol ol { padding-left: 8mm; margin-top: 1mm; columns: 2; column-gap: 8mm; }
+  .indice ol ol li { font-size: 9.4pt; color: var(--tenue); margin: 0 0 .6mm; }
+  .indice ol ol a { color: var(--tenue); }
+</style>
+</head>
+<body>
+
+<section class="copertina">
+  <div class="fiore">🌸</div>
+  <h1>Il gestionale del fiorista</h1>
+  <p class="sotto">Guida all'uso: cassa, ordini e preventivi, magazzino e bolle, composizioni, spese, statistiche e impostazioni.</p>
+  <p class="cosa"><b>Come leggere questa guida.</b> Ogni capitolo corrisponde a una voce del menu del gestionale. Le schermate sono prese dal gestionale vero,
+    riempito con i <b>dati di esempio</b> (un anno di negozio finto) che si caricano e si cancellano da Impostazioni → I tuoi dati.<br>
+    Versione di ottobre 2026 · funziona da computer, tablet e telefono, dal browser, senza installare nulla.</p>
+</section>
+
+<section class="indice capitolo">
+  <h1>Indice</h1>
+  <ol>
+    <li><a href="#c1"><span class="num">1</span>Primi passi</a><ol><li><a href="#c1-1">Entrare</a></li><li><a href="#c1-2">Com'è fatto lo schermo</a></li><li><a href="#c1-3">Titolare e commessi</a></li><li><a href="#c1-4">Le regole d'oro</a></li></ol></li>
+    <li><a href="#c2"><span class="num">2</span>Cruscotto</a><ol><li><a href="#c2-1">Numeri del giorno e del mese</a></li><li><a href="#c2-2">Punto di pareggio</a></li><li><a href="#c2-3">Promemoria automatici</a></li></ol></li>
+    <li><a href="#c3"><span class="num">3</span>Cassa</a><ol><li><a href="#c3-1">Vendita al banco</a></li><li><a href="#c3-2">Importo libero</a></li><li><a href="#c3-3">Totale di giornata</a></li><li><a href="#c3-4">Elenco incassi</a></li><li><a href="#c3-5">Chiusura di cassa</a></li></ol></li>
+    <li><a href="#c4"><span class="num">4</span>Ordini e preventivi</a><ol><li><a href="#c4-1">Ordini in corso</a></li><li><a href="#c4-2">Preventivi in PDF</a></li><li><a href="#c4-3">Acconti e saldo</a></li><li><a href="#c4-4">Giro consegne e bigliettini</a></li></ol></li>
+    <li><a href="#c5"><span class="num">5</span>Magazzino</a><ol><li><a href="#c5-1">Articoli</a></li><li><a href="#c5-2">Movimenti e scarti</a></li><li><a href="#c5-3">Inventario</a></li><li><a href="#c5-4">Lista di riordino</a></li></ol></li>
+    <li><a href="#c6"><span class="num">6</span>Arrivi e bolle</a><ol><li><a href="#c6-1">Registrare un arrivo</a></li><li><a href="#c6-2">La scheda della bolla</a></li><li><a href="#c6-3">Fattura di più bolle</a></li></ol></li>
+    <li><a href="#c7"><span class="num">7</span>Composizioni</a></li>
+    <li><a href="#c8"><span class="num">8</span>Spese</a><ol><li><a href="#c8-1">Registrare una spesa</a></li><li><a href="#c8-2">Da pagare</a></li><li><a href="#c8-3">Spese ricorrenti</a></li></ol></li>
+    <li><a href="#c9"><span class="num">9</span>Statistiche</a></li>
+    <li><a href="#c10"><span class="num">10</span>Clienti e fornitori</a></li>
+    <li><a href="#c11"><span class="num">11</span>Impostazioni</a><ol><li><a href="#c11-1">Attività e aspetto</a></li><li><a href="#c11-2">Liste e permessi</a></li><li><a href="#c11-3">Categorie</a></li><li><a href="#c11-4">Feste</a></li><li><a href="#c11-5">Utenti</a></li><li><a href="#c11-6">Registro delle modifiche</a></li><li><a href="#c11-7">I tuoi dati ed esempio</a></li></ol></li>
+    <li><a href="#c12"><span class="num">12</span>Al telefono e al tablet</a></li>
+    <li><a href="#c13"><span class="num">13</span>Domande frequenti</a></li>
+  </ol>
+</section>
+
+<!-- ================================================================ 1 -->
+<section class="capitolo" id="c1">
+  <h1><span class="num">1</span>Primi passi</h1>
+  <h2 id="c1-1">Entrare</h2>
+  <p>Il gestionale si apre dal browser (Chrome, Safari, Edge…) all'indirizzo che ti è stato dato. Si entra con <b>email e password</b>. Sul computer del negozio
+    resti collegato per 12 ore, poi il gestionale chiede di nuovo la password. Dopo troppi tentativi sbagliati l'accesso si blocca per 15 minuti: è una protezione contro chi prova a indovinare.</p>
+  <figure class="media"><img src="img/00-login.jpg" alt=""><figcaption>La pagina di accesso</figcaption></figure>
+
+  <h2 id="c1-2">Com'è fatto lo schermo</h2>
+  <ul>
+    <li><b>A sinistra il menu</b> con le sezioni: Cruscotto, Cassa, Ordini, Magazzino, Arrivi e bolle, Composizioni, Spese, Statistiche, Clienti, Fornitori, Impostazioni.
+      Sul telefono il menu si apre con il pulsante <kbd>☰</kbd> in alto.</li>
+    <li><b>In alto in ogni sezione</b> ci sono le schede (per esempio in Cassa: Vendita · Totale di giornata · Incassi · Chiusura di cassa) e i pulsanti principali.</li>
+    <li><b>Le finestre</b> (nuovo articolo, nuova spesa…) si chiudono con <kbd>×</kbd>, con il tasto Esc o toccando fuori.</li>
+    <li><b>Gli avvisi</b> compaiono in basso: verde = fatto, rosso = qualcosa non va (con la spiegazione).</li>
+    <li>Se più persone usano il gestionale insieme (cassa e telefono, per esempio), <b>le pagine si aggiornano da sole</b>: un incasso fatto al banco compare subito anche sugli altri dispositivi.</li>
+  </ul>
+
+  <h2 id="c1-3">Titolare e commessi</h2>
+  <table>
+    <tr><th></th><th>Titolare</th><th>Commesso</th></tr>
+    <tr><td>Cassa, ordini, clienti, fornitori</td><td>sì</td><td>sì</td></tr>
+    <tr><td>Magazzino, bolle, composizioni</td><td>sì</td><td>sì (le spese collegate alle bolle no)</td></tr>
+    <tr><td>Sconti in cassa</td><td>sì</td><td>se il titolare lo permette</td></tr>
+    <tr><td>Annullare un incasso</td><td>sempre</td><td>solo i propri di oggi, se permesso</td></tr>
+    <tr><td>Spese, statistiche, registro, impostazioni, utenti</td><td>sì</td><td>no</td></tr>
+  </table>
+  <p>Queste regole sono scritte nel database, non solo nelle pagine: un commesso non vede le spese nemmeno scrivendo a mano l'indirizzo della pagina.</p>
+
+  <h2 id="c1-4">Le regole d'oro</h2>
+  <div class="box consiglio"><b>Tre abitudini che rendono i numeri giusti</b>
+    <ol><li><b>La merce entra solo dalle bolle</b> (capitolo 6): così si sa quando è arrivata, quanto è costata e da chi.</li>
+      <li><b>Ogni incasso passa dalla Cassa</b>, articolo per articolo oppure con il totale di giornata (capitolo 3).</li>
+      <li><b>Ogni spesa va in Spese</b>, meglio con la foto della fattura (capitolo 8). Quelle che si ripetono si scrivono una volta sola come ricorrenti.</li></ol>
+  </div>
+</section>
+
+<!-- ================================================================ 2 -->
+<section class="capitolo" id="c2">
+  <h1><span class="num">2</span>Cruscotto</h1>
+  <p>È la pagina che si apre entrando: la giornata a colpo d'occhio e tutto ciò che richiede attenzione. Il commesso vede una versione ridotta, senza spese e risultati economici.</p>
+  <figure><img src="img/01-cruscotto.jpg" alt=""><figcaption>Il cruscotto del titolare con i dati di esempio: numeri, punto di pareggio, feste e ordini</figcaption></figure>
+  <h2 id="c2-1">Numeri del giorno e del mese</h2>
+  <ul><li><b>Incassato oggi</b>, con il numero di incassi e la divisione per metodo di pagamento (contanti, carta…).</li>
+    <li><b>Incassato nel mese</b> e, sotto, quanto si era incassato nello stesso mese dell'anno prima.</li>
+    <li><b>Uscite del mese</b> e <b>risultato del mese</b> (incassi meno spese): verde se positivo, rosso se negativo.</li></ul>
+  <h2 id="c2-2">Punto di pareggio e previsione</h2>
+  <p>Il gestionale calcola <b>quanto serve incassare al mese per coprire le spese</b> (la media degli ultimi 12 mesi, o le spese ricorrenti se sono più alte), quanto fa
+    <b>per ogni giorno di apertura</b>, e dove si arriverà <b>a fine mese a questo ritmo</b>. Se in Impostazioni c'è un obiettivo mensile, compare anche quello con la percentuale raggiunta.</p>
+  <h2 id="c2-3">Promemoria automatici</h2>
+  <ul>
+    <li><b>Feste in arrivo</b>: San Valentino, Festa della mamma, Defunti, Natale… qualche settimana prima, con quanto si era incassato la settimana prima l'anno scorso
+      (utile per decidere quanta merce ordinare). Le feste si cambiano in Impostazioni → Feste.</li>
+    <li><b>Ordini dei prossimi 7 giorni</b>, con lo stato e quanto resta da incassare. In rosso quelli in ritardo.</li>
+    <li><b>Ricorrenze dei clienti</b>: anniversari e compleanni da ricordare (con il telefono pronto da chiamare).</li>
+    <li><b>Da pagare</b>: fatture con scadenza e spese ricorrenti in arrivo.</li>
+    <li><b>Magazzino</b>: articoli sotto la scorta minima, fiori arrivati da troppi giorni («da controllare») e bolle senza fattura.</li>
+    <li><b>Ultimi 12 mesi</b>: incassi, spese e risultato mese per mese. Passando con il mouse (o toccando) su un mese compaiono i valori.</li>
+  </ul>
+  <figure><img src="img/01b-cruscotto.jpg" alt=""><figcaption>Più sotto: ricorrenze dei clienti, cose da pagare, magazzino</figcaption></figure>
+  <figure><img src="img/01c-cruscotto.jpg" alt=""><figcaption>Il grafico degli ultimi 12 mesi</figcaption></figure>
+</section>
+
+<!-- ================================================================ 3 -->
+<section class="capitolo" id="c3">
+  <h1><span class="num">3</span>Cassa</h1>
+  <p>Si può lavorare in <b>due modi</b>, anche mescolati: <b>vendita articolo per articolo</b> (il magazzino si scala da solo e si sa cosa si vende e quanto si guadagna)
+    oppure <b>totale di giornata</b> (a sera si scrive quanto ha incassato il registratore). Il pulsante <kbd>+ Vendita</kbd> in alto porta sempre qui.</p>
+  <h2 id="c3-1">Vendita al banco</h2>
+  <figure><img src="img/02-cassa-vendita.jpg" alt=""><figcaption>A sinistra gli articoli e le composizioni da toccare, a destra lo scontrino</figcaption></figure>
+  <ol class="passi">
+    <li><b>Tocca gli articoli</b> (o le composizioni, con lo sfondo rosa). Toccare due volte lo stesso articolo = quantità 2. Si può cercare per nome, filtrare per categoria
+      o usare un <b>lettore di codici a barre</b>: legge il codice, preme Invio da solo e l'articolo entra nello scontrino.</li>
+    <li><b>Correggi quantità e prezzo</b> se serve: toccando il campo il numero si seleziona tutto e si scrive sopra. I totali cambiano mentre scrivi.
+      Se un numero non è valido il campo diventa rosso e l'incasso non parte finché non lo correggi.</li>
+    <li>Se serve: <b>sconto</b> (in euro), <b>tipo di incasso</b> (vendita al banco, composizioni, matrimoni…), <b>documento</b> (scontrino, fattura, ricevuta), <b>cliente</b>, <b>nota</b>.</li>
+    <li><b>Scegli come paga</b> il cliente. Con «Contanti» puoi scrivere quanto ti dà e il gestionale calcola il <b>resto</b>.</li>
+    <li>Premi <kbd>Incassa</kbd>. Lo scontrino si svuota, l'incasso è registrato e il magazzino aggiornato. Una composizione scala <b>ogni suo componente</b> (es. 12 rose, 3 eucalipto, carta e nastro).</li>
+  </ol>
+  <div class="box consiglio"><b>Lo scontrino non si perde</b>Se cambi pagina o chiudi il browser a metà, ritrovi lo scontrino come l'avevi lasciato. Un doppio tocco su «Incassa» registra un solo incasso.</div>
+  <h2 id="c3-2">Importo libero</h2>
+  <p>Per vendere qualcosa che non è tra gli articoli (una composizione fatta al momento, un servizio particolare): <kbd>+ Importo libero</kbd>, descrizione, prezzo IVA compresa e quantità.</p>
+  <figure class="piccola"><img src="img/03-cassa-importo-libero.jpg" alt=""><figcaption>Una voce libera nello scontrino</figcaption></figure>
+
+  <h2 id="c3-3">Totale di giornata</h2>
+  <p>Per chi batte gli scontrini sul registratore telematico: <b>a fine giornata</b> si scrive il totale per ogni metodo di pagamento. Si possono indicare il giorno, il tipo di incasso,
+    l'IVA media (10% per piante e fiori) e il numero della chiusura del registratore. Il gestionale crea un incasso per ogni metodo, così statistiche e chiusura di cassa sono complete.</p>
+  <figure><img src="img/04-cassa-giornata.jpg" alt=""><figcaption>Il totale di giornata: un importo per ogni metodo</figcaption></figure>
+  <div class="box attenzione"><b>Da sapere</b>Con il solo totale di giornata il magazzino non si scala da solo e le statistiche «articoli venduti» e «margini» restano vuote:
+    in quel caso le giacenze si tengono giuste con scarti e inventario. Si possono mescolare i due modi (per esempio composizioni dal gestionale, il resto col totale serale).</div>
+
+  <h2 id="c3-4">Elenco incassi</h2>
+  <p>Tutti gli incassi di un giorno o di un periodo (pulsanti rapidi Oggi, Ieri, Questo mese), con il totale per metodo e i filtri per metodo e tipo.
+    <kbd>Scarica CSV</kbd> crea un file che si apre con Excel. Toccando un incasso si vede il dettaglio: il titolare può correggere data, tipo, metodo, documento e nota, oppure
+    <b>annullare</b> l'incasso (la merce torna in magazzino).</p>
+  <figure><img src="img/05-cassa-incassi.jpg" alt=""><figcaption>Gli incassi di oggi</figcaption></figure>
+  <figure class="media"><img src="img/06-cassa-incasso-dettaglio.jpg" alt=""><figcaption>Il dettaglio di un incasso, con le modifiche del titolare</figcaption></figure>
+
+  <h2 id="c3-5">Chiusura di cassa</h2>
+  <p>A fine giornata si contano i contanti. Il gestionale calcola quanti dovrebbero essercene:</p>
+  <p style="text-align:center"><b>fondo cassa + incassi in contanti − spese pagate in contanti − contanti tolti o versati in banca</b></p>
+  <p>e dice se <b>la cassa è giusta</b>, se <b>avanzano</b> o se <b>mancano</b> soldi. Il fondo del giorno dopo viene proposto uguale ai contanti contati.
+    Mostra anche il totale dei pagamenti elettronici, da confrontare con la chiusura del POS. A destra lo storico delle ultime chiusure.</p>
+  <figure><img src="img/07-cassa-chiusura.jpg" alt=""><figcaption>Chiusura di cassa con lo storico</figcaption></figure>
+</section>
+
+<!-- ================================================================ 4 -->
+<section class="capitolo" id="c4">
+  <h1><span class="num">4</span>Ordini e preventivi</h1>
+  <p>I lavori su ordinazione: bouquet da consegnare, matrimoni, funerali, fiori per le aziende. Ogni ordine ha un numero (es. 2026-0012), una data di consegna, il cliente e le voci con i prezzi.</p>
+  <h2 id="c4-1">Ordini in corso</h2>
+  <figure><img src="img/10-ordini.jpg" alt=""><figcaption>Gli ordini in corso, in ordine di consegna (in rosso quelli in ritardo)</figcaption></figure>
+  <ol class="passi">
+    <li><kbd>+ Nuovo ordine</kbd>: cliente (anche nuovo, si crea al volo con nome e telefono), tipo di lavoro, descrizione, data e ora.</li>
+    <li><b>Consegna</b>: ritiro in negozio, a domicilio (con indirizzo, destinatario e telefono) o allestimento di un evento.</li>
+    <li><b>Bigliettino</b>: il testo da scrivere sul biglietto.</li>
+    <li><b>Voci</b> con quantità e prezzo, anche prese da una composizione. Il totale lo calcola il gestionale.</li>
+    <li>Nella scheda, il pulsante principale fa avanzare lo stato: <b>Da fare → In lavorazione → Pronto → Consegnato</b>.</li>
+  </ol>
+  <figure><img src="img/11-ordine-scheda.jpg" alt=""><figcaption>La scheda di un ordine: consegna, bigliettino, voci, pagamenti</figcaption></figure>
+
+  <h2 id="c4-2">Preventivi in PDF</h2>
+  <p>Un preventivo è un ordine che il cliente non ha ancora accettato. Si crea da <b>Ordini → Preventivi → + Nuovo preventivo</b>, con le voci, la validità e le condizioni
+    (il testo predefinito si cambia in Impostazioni). <kbd>Stampa / PDF</kbd> apre il foglio da stampare o da salvare come PDF («Salva come PDF» nella finestra di stampa) e mandare al cliente.
+    Quando il cliente accetta: <kbd>Accettato: diventa ordine</kbd>. Le statistiche contano quanti preventivi vengono accettati.</p>
+  <figure><img src="img/12-preventivo-scheda.jpg" alt=""><figcaption>Un preventivo per un matrimonio</figcaption></figure>
+  <figure><img src="img/13-preventivo-modulo.jpg" alt=""><figcaption>Il modulo del preventivo: cliente, evento, voci, validità e condizioni</figcaption></figure>
+  <figure><img src="img/14-preventivo-stampa.jpg" alt=""><figcaption>Il foglio del preventivo, pronto da stampare o salvare in PDF, con i dati del negozio</figcaption></figure>
+
+  <h2 id="c4-3">Acconti e saldo</h2>
+  <p>Nella scheda dell'ordine, <kbd>Incassa</kbd> registra un <b>acconto</b> (proposto il 30%) o il <b>saldo</b>, con metodo e documento. Sono incassi veri: compaiono in Cassa
+    e nelle statistiche, collegati all'ordine. La scheda mostra quanto è già stato incassato e quanto manca.</p>
+  <h2 id="c4-4">Giro consegne e bigliettini</h2>
+  <p>La scheda <b>Giro consegne</b> mostra per un giorno (Oggi, Domani, o una data) le consegne con indirizzi e i ritiri in negozio. <kbd>Stampa giro</kbd> crea il foglio per chi consegna
+    (ora, cosa, dove, chi, quanto incassare, casella «fatto»). <kbd>Bigliettini</kbd> stampa tutti i biglietti del giorno, due per foglio, da ritagliare.</p>
+  <figure><img src="img/15-giro-consegne.jpg" alt=""><figcaption>Il giro consegne di domani</figcaption></figure>
+</section>
+
+<!-- ================================================================ 5 -->
+<section class="capitolo" id="c5">
+  <h1><span class="num">5</span>Magazzino</h1>
+  <h2 id="c5-1">Articoli</h2>
+  <p>L'elenco di tutto ciò che si vende: fiori recisi, piante, vasi, terricci, nastri, servizi (consegna, confezione). Per ognuno: <b>giacenza</b>, costo, prezzo, <b>margine</b> e valore in magazzino.
+    In arancione gli articoli sotto la scorta minima, in rosso quelli finiti. Si cerca per nome, codice o nome botanico e si filtra per categoria.</p>
+  <figure><img src="img/20-magazzino.jpg" alt=""><figcaption>Gli articoli del magazzino</figcaption></figure>
+  <ul>
+    <li><b>Costo d'acquisto IVA esclusa</b> (come sulla bolla): si aggiorna da solo a ogni arrivo. <b>Prezzo di vendita IVA inclusa</b>.</li>
+    <li><b>Prezzo consigliato</b>: costo × ricarico (in Impostazioni, di base 2,5) con l'IVA, arrotondato a 50 centesimi. <kbd>usa</kbd> lo copia nel prezzo.</li>
+    <li><b>Scorta minima</b> e <b>quantità da riordinare</b>: servono alla lista di riordino.</li>
+    <li><b>Deperibile</b> e <b>quanti giorni dura</b>: dopo quei giorni dall'ultimo arrivo il cruscotto ricorda di controllare (e magari registrare uno scarto).</li>
+    <li><b>Scheda della pianta</b>: nome botanico, interno/esterno, luce e acqua, consigli di cura.</li>
+    <li><b>Servizi</b> (togli «si tiene a magazzino»): si vendono ma non hanno giacenza.</li>
+    <li>Dalla scheda di un articolo si registrano <b>scarto, uso interno, reso, correzione della giacenza</b> e se ne vede la storia.</li>
+  </ul>
+  <figure class="media"><img src="img/21-articolo.jpg" alt=""><figcaption>La scheda di un articolo con prezzo consigliato e margine</figcaption></figure>
+  <h2 id="c5-2">Movimenti e scarti</h2>
+  <p>Ogni entrata e uscita di merce: arrivi (con la bolla), vendite, <b>scarti</b> (fiori appassiti, piante rovinate), uso interno (composizioni per la vetrina), resi e correzioni.
+    In alto il valore degli scarti del periodo, cioè quanto si è perso. Le statistiche li riportano per categoria.</p>
+  <figure><img src="img/22-movimenti.jpg" alt=""><figcaption>Movimenti dell'ultimo mese</figcaption></figure>
+  <h2 id="c5-3">Inventario</h2>
+  <p>Per contare la merce: si scrive la quantità contata solo dove è diversa e si salva. Il gestionale registra la differenza come «correzione inventario» (con data e utente).
+    <kbd>Foglio da compilare</kbd> stampa l'elenco da riempire a penna girando per il negozio.</p>
+  <figure><img src="img/23-inventario.jpg" alt=""><figcaption>Inventario guidato, diviso per categoria</figcaption></figure>
+  <h2 id="c5-4">Lista di riordino</h2>
+  <p>Gli articoli arrivati alla scorta minima, <b>divisi per fornitore</b>, con la quantità da ordinare già proposta (modificabile).
+    <kbd>Copia il messaggio</kbd> prepara il testo da incollare su WhatsApp o in una email; <kbd>Registra l'arrivo</kbd>, quando la merce arriva, apre la bolla già compilata con quegli articoli.</p>
+  <figure><img src="img/24-riordino.jpg" alt=""><figcaption>La lista di riordino per fornitore</figcaption></figure>
+</section>
+
+<!-- ================================================================ 6 -->
+<section class="capitolo" id="c6">
+  <h1><span class="num">6</span>Arrivi e bolle</h1>
+  <p>Ogni arrivo di merce è una <b>bolla</b> (documento di trasporto): numero e data del fornitore, giorno in cui è arrivata, articoli con quantità e costo, e la foto o il PDF della bolla.</p>
+  <figure><img src="img/25-bolle.jpg" alt=""><figcaption>Tutte le bolle, con lo stato della fattura</figcaption></figure>
+  <h2 id="c6-1">Registrare un arrivo</h2>
+  <ol class="passi">
+    <li><kbd>Arrivo merce</kbd> (da Magazzino o da Arrivi e bolle). Scegli il <b>fornitore</b>: i suoi articoli vanno in cima all'elenco.</li>
+    <li>Scrivi <b>numero e data della bolla</b> e il <b>giorno di arrivo</b> (proposto oggi).</li>
+    <li>Aggiungi gli <b>articoli</b> con quantità e costo unitario IVA esclusa. Un articolo nuovo si crea al volo con <kbd>+ Articolo nuovo</kbd>. In fondo, imponibile, IVA e totale.</li>
+    <li>Allega la <b>foto della bolla</b> (dal telefono si apre direttamente la fotocamera).</li>
+    <li>Il titolare può registrare subito anche la <b>spesa</b> (fattura insieme alla merce) oppure lasciarla per dopo.</li>
+    <li><kbd>Carica in magazzino</kbd>: giacenze e costi aggiornati.</li>
+  </ol>
+  <figure><img src="img/27-bolla-nuova.jpg" alt=""><figcaption>Un arrivo di merce: fornitore, bolla, articoli, foto</figcaption></figure>
+  <h2 id="c6-2">La scheda della bolla</h2>
+  <p>Mostra gli articoli arrivati, i totali, le foto (si aprono toccandole) e la fattura collegata. Una bolla inserita per sbaglio si <b>annulla</b>: la merce viene tolta dal magazzino.</p>
+  <figure><img src="img/26-bolla-scheda.jpg" alt=""><figcaption>Una bolla con la fattura collegata</figcaption></figure>
+  <h2 id="c6-3">Fattura di più bolle</h2>
+  <p>Molti fornitori mandano <b>una fattura a fine mese per tutte le bolle</b>. In Arrivi e bolle si spuntano le bolle (dello stesso fornitore) e <kbd>Collega una fattura</kbd>:
+    il gestionale propone il totale delle bolle (da controllare con la fattura: trasporto, sconti), numero, scadenza e pagamento, e crea la spesa collegata.
+    Se la fattura è già tra le spese, la si sceglie dall'elenco. Il cruscotto ricorda le bolle ancora senza fattura.</p>
+</section>
+
+<!-- ================================================================ 7 -->
+<section class="capitolo" id="c7">
+  <h1><span class="num">7</span>Composizioni</h1>
+  <p>Una composizione (bouquet, centrotavola, cuscino funebre…) è descritta come una <b>ricetta</b> di articoli del magazzino. Quando si vende:</p>
+  <ul><li>il magazzino scala <b>ogni componente</b> (12 rose, 3 rami di eucalipto, 1 m di carta, 1 m di nastro…);</li>
+    <li>il gestionale sa <b>quanto è costata</b> (somma dei componenti al costo attuale) e quindi <b>quanto ci si guadagna</b>.</li></ul>
+  <figure><img src="img/30-composizioni.jpg" alt=""><figcaption>Le composizioni: prezzo, materiali, margine, prezzo consigliato e quante se ne possono fare con le scorte</figcaption></figure>
+  <p>Nella scheda: nome, categoria, IVA, componenti con quantità, eventuale <b>costo del lavoro</b> (il tempo del fiorista) e prezzo di vendita. Sotto, in diretta:
+    <b>costo dei materiali</b>, <b>prezzo consigliato</b> con il ricarico, quanto <b>resta</b> al netto di IVA, materiali e lavoro, e <b>quante composizioni</b> si possono fare con le scorte di oggi.</p>
+  <figure class="media"><img src="img/31-composizione.jpg" alt=""><figcaption>La ricetta del bouquet di 12 rose, con il calcolo del margine</figcaption></figure>
+  <div class="box consiglio"><b>Consiglio</b>Prima di San Valentino o dei Defunti guarda «materiale per…» sulle composizioni: dice subito se le scorte bastano.</div>
+</section>
+
+<!-- ================================================================ 8 -->
+<section class="capitolo" id="c8">
+  <h1><span class="num">8</span>Spese</h1>
+  <p>Solo il titolare. Tutte le uscite: affitto, TARI, luce, gas, telefono, stipendi, contributi, commercialista, assicurazione, merce, carburante, manutenzione, pubblicità, tasse…
+    Le categorie (fisse e variabili) si cambiano in Impostazioni.</p>
+  <figure><img src="img/32-spese.jpg" alt=""><figcaption>Le spese dell'anno, con filtri per periodo, categoria, fornitore e tipo</figcaption></figure>
+  <h2 id="c8-1">Registrare una spesa</h2>
+  <p><kbd>+ Spesa</kbd>: data, categoria, descrizione, fornitore, numero della fattura, <b>importo totale IVA compresa</b> e <b>di cui IVA</b>
+    (i collegamenti 22% · 10% · 4% la calcolano dall'importo), pagamento, già pagata o con scadenza, nota. In fondo si allega la <b>foto o il PDF</b> della fattura o della bolletta (fino a 8 MB):
+    resta nel gestionale, nel backup notturno, e si riapre con un tocco.</p>
+  <figure class="media"><img src="img/33-spesa-nuova.jpg" alt=""><figcaption>Una spesa nuova</figcaption></figure>
+  <h2 id="c8-2">Da pagare</h2>
+  <p>Le spese non ancora pagate, in ordine di scadenza, con il totale e quelle già scadute in rosso. Pagata una spesa, si apre e si spunta «Già pagata».</p>
+  <figure><img src="img/34-spese-da-pagare.jpg" alt=""><figcaption>Le spese da pagare</figcaption></figure>
+  <h2 id="c8-3">Spese ricorrenti</h2>
+  <p>Affitto, TARI, luce, telefono, commercialista, assicurazione: <b>si scrivono una volta</b> con importo e frequenza (ogni mese, 2, 3, 4, 6 mesi, ogni anno).
+    In alto i <b>costi fissi al mese</b>. Quando arriva il momento il cruscotto le ricorda; <kbd>Registra</kbd> crea la spesa (l'importo si può correggere, per esempio una bolletta diversa)
+    e sposta in avanti la prossima scadenza. Se l'elenco è vuoto, un pulsante aggiunge le voci tipiche da completare.</p>
+  <figure><img src="img/35-ricorrenti.jpg" alt=""><figcaption>Le spese ricorrenti e i costi fissi al mese</figcaption></figure>
+</section>
+
+<!-- ================================================================ 9 -->
+<section class="capitolo" id="c9">
+  <h1><span class="num">9</span>Statistiche</h1>
+  <p>Solo il titolare. Si sceglie il periodo (questo mese, mese scorso, trimestre, quest'anno, anno scorso, ultimi 12 mesi, oppure due date) e il gestionale mostra:</p>
+  <ul>
+    <li><b>Incassi, spese e risultato</b>, con il confronto con lo stesso periodo dell'anno prima; scontrino medio e incasso medio al giorno; spese fisse e variabili; perdite per scarti.</li>
+    <li><b>Mese per mese</b>: grafico e tabella con incassi, spese, di cui fisse, risultato.</li>
+    <li><b>Dove vanno i soldi</b> (spese per categoria) e <b>da dove arrivano</b> (incassi per tipo), con ciambella e barre.</li>
+    <li><b>Quanto rende ogni categoria di articoli</b>: incassato, al netto dell'IVA, costo della merce, <b>margine</b> in euro e in percentuale.</li>
+    <li><b>I più venduti</b>, <b>scarti e uso interno</b> (anche in percentuale sulla merce comprata), <b>giorni della settimana</b>, <b>come pagano i clienti</b>.</li>
+    <li><b>Fornitori</b> (quanto si spende con ciascuno), <b>magazzino oggi</b> (valore al costo e alla vendita), <b>ordini e preventivi</b> (quanti accettati).</li>
+    <li><b>IVA del periodo</b> (regime ordinario): IVA sulle vendite meno IVA su acquisti e spese. È una stima: il conto vero lo fa il commercialista.</li>
+  </ul>
+  <p><kbd>Dati per il commercialista</kbd> scarica due file Excel (incassi e spese del periodo, con IVA e imponibile). <kbd>Stampa</kbd> stampa o salva in PDF tutta la pagina.</p>
+  <figure><img src="img/36-statistiche.jpg" alt=""><figcaption>Totali del periodo e grafico mese per mese</figcaption></figure>
+  <figure><img src="img/36b-statistiche.jpg" alt=""><figcaption>Spese per categoria e incassi per tipo</figcaption></figure>
+  <figure><img src="img/36c-statistiche.jpg" alt=""><figcaption>Quanto rende ogni categoria di articoli, i più venduti, le perdite</figcaption></figure>
+  <figure><img src="img/36d-statistiche.jpg" alt=""><figcaption>Giorni della settimana, metodi di pagamento, fornitori, magazzino, ordini e IVA</figcaption></figure>
+</section>
+
+<!-- ================================================================ 10 -->
+<section class="capitolo" id="c10">
+  <h1><span class="num">10</span>Clienti e fornitori</h1>
+  <h2>Clienti</h2>
+  <p>Nome, tipo (privato, azienda, ente), telefono, email, indirizzo, codice fiscale o partita IVA, note (gusti, fiori preferiti, allergie).
+    La scheda del cliente mostra <b>quanto ha speso</b>, gli <b>ordini e preventivi</b> e le <b>ricorrenze da ricordare</b> (anniversari, compleanni) con quanti giorni prima avvisare.
+    Dal telefono c'è il collegamento diretto per chiamare o scrivere su WhatsApp.</p>
+  <figure><img src="img/37-clienti.jpg" alt=""><figcaption>L'elenco dei clienti</figcaption></figure>
+  <figure><img src="img/38-cliente.jpg" alt=""><figcaption>La scheda di un cliente, con le ricorrenze</figcaption></figure>
+  <h2>Fornitori</h2>
+  <p>Grossisti, vivai, ma anche chi manda le bollette. Per ognuno: referente, contatti, IBAN, note (giorni di consegna, ordine minimo), numero di bolle e data dell'ultima,
+    e quanto si è speso quest'anno. Un fornitore che non si usa più si disattiva.</p>
+  <figure><img src="img/39-fornitori.jpg" alt=""><figcaption>I fornitori</figcaption></figure>
+</section>
+
+<!-- ================================================================ 11 -->
+<section class="capitolo" id="c11">
+  <h1><span class="num">11</span>Impostazioni</h1>
+  <p>Solo il titolare. Qui si adatta il gestionale al negozio, senza bisogno del tecnico.</p>
+  <h2 id="c11-1">Attività e aspetto</h2>
+  <p>Nome del negozio, ragione sociale, partita IVA, codice fiscale, indirizzo, telefono, email (si stampano su preventivi e documenti); <b>colore principale e secondario</b> del gestionale;
+    regime fiscale (ordinario o forfettario); IVA proposta; <b>obiettivo di incasso al mese</b>; giorni di apertura al mese (punto di pareggio); <b>ricarico</b> per il prezzo consigliato;
+    scorta minima predefinita; testo delle condizioni dei preventivi.</p>
+  <figure><img src="img/40-impostazioni.jpg" alt=""><figcaption>Attività e aspetto</figcaption></figure>
+  <h2 id="c11-2">Liste e permessi</h2>
+  <ul><li><b>Metodi di incasso</b> (es. aggiungere «buono regalo»), <b>metodi di pagamento delle spese</b>, <b>unità di misura</b>: una voce per riga, la prima è quella proposta.</li>
+    <li><b>Sezioni del gestionale</b>: quelle che non servono si spengono e spariscono dal menu (i dati restano).</li>
+    <li><b>Permessi dei commessi</b>: fare sconti in cassa, annullare i propri incassi di oggi.</li></ul>
+  <figure><img src="img/42-impostazioni-liste.jpg" alt=""><figcaption>Liste e permessi</figcaption></figure>
+  <h2 id="c11-3">Categorie</h2>
+  <p>Tre gruppi: <b>articoli</b> (con l'IVA proposta), <b>spese</b> (fisse o variabili), <b>incassi</b>. Si rinominano, si colorano, si riordinano; quelle già usate non si cancellano ma si spengono.
+    Danno forma alle statistiche: vale la pena sistemarle all'inizio.</p>
+  <figure><img src="img/43-impostazioni-categorie.jpg" alt=""><figcaption>Le categorie</figcaption></figure>
+  <h2 id="c11-4">Feste</h2>
+  <p>Il calendario delle feste che contano per il fiorista, con quanti giorni prima avvisare e un promemoria (cosa ordinare). Le date possono essere fisse, legate alla Pasqua
+    (es. Domenica delle Palme = 7 giorni prima) o la Festa della mamma (seconda domenica di maggio). Si aggiungono il patrono, la fiera del paese…</p>
+  <figure><img src="img/44-impostazioni-feste.jpg" alt=""><figcaption>Il calendario delle feste</figcaption></figure>
+  <h2 id="c11-5">Utenti</h2>
+  <p>Ognuno entra con la sua email: nel registro si vede chi ha fatto cosa. <kbd>+ Utente</kbd>: nome, ruolo (commesso o titolare), email e password provvisoria (almeno 10 caratteri),
+    che la persona poi cambia da «Cambia password» in basso nel menu. Il titolare può reimpostare la password di un commesso o eliminarlo; deve restare sempre almeno un titolare.</p>
+  <figure><img src="img/45-impostazioni-utenti.jpg" alt=""><figcaption>Gli utenti</figcaption></figure>
+  <h2 id="c11-6">Registro delle modifiche</h2>
+  <p>Ogni creazione, modifica e cancellazione (incassi, spese, articoli, ordini, bolle, impostazioni…) con <b>chi</b>, <b>quando</b> e, toccando la riga, i valori <b>prima e dopo</b>.
+    Utile per capire cos'è successo («chi ha cambiato questo prezzo?»).</p>
+  <figure><img src="img/46-impostazioni-registro.jpg" alt=""><figcaption>Il registro delle modifiche</figcaption></figure>
+  <h2 id="c11-7">I tuoi dati ed esempio</h2>
+  <ul><li><kbd>Scarica tutto</kbd>: un file con tutto il contenuto del gestionale, da tenere da parte.</li>
+    <li><b>Dati di esempio</b>: <kbd>Carica i dati di esempio</kbd> riempie il gestionale vuoto con un anno di negozio finto (circa un minuto), per provarlo e mostrarlo.
+      <kbd>Cancella i dati di esempio</kbd> li toglie tutti prima di iniziare a lavorare davvero; categorie e feste restano.</li>
+    <li>I dati sono comunque salvati <b>ogni notte</b> sul server e in una <b>copia cifrata fuori casa</b>.</li></ul>
+  <figure><img src="img/41-impostazioni-dati.jpg" alt=""><figcaption>I tuoi dati e i dati di esempio</figcaption></figure>
+</section>
+
+<!-- ================================================================ 12 -->
+<section class="capitolo" id="c12">
+  <h1><span class="num">12</span>Al telefono e al tablet</h1>
+  <p>Il gestionale si adatta allo schermo: sul tablet la cassa resta affiancata (articoli a sinistra, scontrino a destra), sul telefono gli articoli sono in alto e lo scontrino sotto.
+    Una <b>barra in basso</b> mostra pezzi e totale e porta allo scontrino con un tocco. Il menu si apre con <kbd>☰</kbd>, la vendita con <kbd>+ Vendita</kbd> in alto.</p>
+  <div class="telefoni">
+    <figure><img src="img/50-telefono-cruscotto.jpg" alt=""><figcaption>Cruscotto</figcaption></figure>
+    <figure><img src="img/51-telefono-cassa.jpg" alt=""><figcaption>Cassa con la barra dello scontrino</figcaption></figure>
+    <figure><img src="img/52-telefono-menu.jpg" alt=""><figcaption>Menu</figcaption></figure>
+  </div>
+  <div class="box consiglio"><b>Come un'app</b>Su iPhone: Safari → Condividi → «Aggiungi a schermata Home». Su Android: Chrome → ⋮ → «Aggiungi a schermata Home».
+    Il gestionale si apre con un tocco dall'icona, come un'app.</div>
+</section>
+
+<!-- ================================================================ 13 -->
+<section class="capitolo" id="c13">
+  <h1><span class="num">13</span>Domande frequenti</h1>
+  <h3>Posso fare solo il totale di giornata, senza registrare le vendite una per una?</h3>
+  <p>Sì: Cassa → Totale di giornata. Incassi, statistiche e chiusura di cassa sono completi; il magazzino invece si tiene giusto con arrivi, scarti e inventario,
+    e le statistiche sui margini degli articoli restano vuote. Si possono mescolare i due modi.</p>
+  <h3>Ho sbagliato un incasso.</h3>
+  <p>Cassa → Incassi → tocca l'incasso. Il titolare corregge data, metodo, documento e nota, oppure annulla l'incasso (la merce torna in magazzino) e lo rifà giusto.
+    Il commesso può annullare solo i suoi di oggi, se il titolare lo permette.</p>
+  <h3>Ho caricato una bolla sbagliata.</h3>
+  <p>Arrivi e bolle → apri la bolla → <kbd>Annulla la bolla</kbd>: la merce viene tolta dal magazzino. Poi si rifà giusta.</p>
+  <h3>La giacenza di un articolo non torna.</h3>
+  <p>Magazzino → Inventario (o dalla scheda dell'articolo «Correggi giacenza»): si scrive quanto c'è davvero e il gestionale registra la correzione. Nei Movimenti si vede la storia.</p>
+  <h3>Che differenza c'è tra costo e prezzo?</h3>
+  <p>Il <b>costo</b> è quanto paghi l'articolo al fornitore, <b>IVA esclusa</b> (come sulla bolla). Il <b>prezzo</b> è quanto lo vendi, <b>IVA inclusa</b> (come sul cartellino).
+    Il margine è il prezzo senza IVA meno il costo.</p>
+  <h3>A cosa servono le categorie?</h3>
+  <p>Raggruppano articoli, spese e incassi nelle statistiche: «quanto rendono le piante da interno?», «quanto spendo di utenze?». Si cambiano in Impostazioni → Categorie.</p>
+  <h3>I dati sono al sicuro?</h3>
+  <p>Il gestionale gira su un server dedicato, con accesso solo con password (e blocco dopo troppi tentativi). Ogni notte i dati vengono copiati su un disco di backup e in una copia
+    cifrata fuori casa. Le foto delle fatture e delle bolle sono dentro il database, quindi anche loro nel backup. Ogni utente ha la sua password: non condividerla.</p>
+  <h3>Ho dimenticato la password.</h3>
+  <p>Un commesso chiede al titolare (Impostazioni → Utenti → Modifica → Imposta la password). Il titolare chiede a chi gestisce il server.</p>
+  <h3>Cosa vede il commercialista?</h3>
+  <p>Statistiche → <kbd>Dati per il commercialista</kbd>: due file Excel con incassi e spese del periodo (con IVA, imponibile, numeri dei documenti). Le foto delle fatture si aprono dalle spese.</p>
+  <div class="box attenzione"><b>Importante</b>Il riepilogo IVA delle statistiche è una stima basata su quello che si inserisce: non sostituisce i registri e le liquidazioni del commercialista.</div>
+</section>
+
+</body>
+</html>

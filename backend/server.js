@@ -458,6 +458,9 @@ async function bootstrapAdmin() {
 
 await waitForDb();
 await runMigrations();
+// PostgREST parte insieme a questo servizio: se si è messo in ascolto DOPO le migrazioni non ha sentito l'avviso
+// «reload schema» e non vedrebbe funzioni e tabelle nuove. Lo si ripete qualche volta all'avvio (costa nulla).
+for (const s of [3, 15, 60]) setTimeout(() => pool.query("notify pgrst, 'reload schema'").catch(() => {}), s * 1000).unref();
 await bootstrapAdmin();
 await startListener();
 server.listen(Number(PORT), () => console.log(`Servizio in ascolto sulla porta ${PORT}`));

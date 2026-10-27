@@ -232,9 +232,26 @@
     return `<header class="testa"><h1>Impostazioni</h1></header>${tabs('dati')}
       <section class="card"><h2>Scarica tutti i dati</h2><p>Un file con tutto il contenuto del gestionale (articoli, incassi, spese, ordini, clienti, fornitori, bolle, movimenti, categorie...), per tenerlo da parte o portarlo altrove. Gli allegati (foto e PDF) restano nel gestionale.</p>
       <p class="muted">I dati sono comunque salvati ogni notte sul server e in una copia cifrata fuori casa.</p>
-      <button class="btn primary" type="button" id="d-json">⬇ Scarica tutto (JSON)</button></section>`;
+      <button class="btn primary" type="button" id="d-json">⬇ Scarica tutto (JSON)</button></section>
+      <section class="card"><h2>🌷 Dati di esempio</h2>
+      <p>Per far vedere come funziona: un anno di negozio finto (articoli, composizioni, bolle, vendite con i picchi delle feste, ordini, preventivi, spese, chiusure di cassa).
+      Si caricano solo a gestionale vuoto e si cancellano con un tocco prima di iniziare a usarlo davvero (categorie e feste restano).</p>
+      <div class="azioni sinistra"><button class="btn" type="button" id="d-esempio">Carica i dati di esempio</button>
+      <button class="btn danger ghost" type="button" id="d-via">Cancella i dati di esempio</button></div></section>`;
   }
   function collegaDati(v) {
+    const es = $('#d-esempio', v), via = $('#d-via', v);
+    es.onclick = () => occupato(es, async () => {
+      if (!(await conferma('Caricare un anno di dati finti? Ci vuole circa un minuto. Si possono cancellare quando vuoi.', 'Carica', false))) return;
+      es.disabled = true; es.textContent = 'Carico… (circa un minuto)';
+      try { const r = await FG.rpc('carica_dati_esempio'); await caricaComuni(); toast(`Caricati ${r.articoli} articoli, ${r.incassi} incassi, ${r.bolle} bolle, ${r.spese} spese`, 'ok'); FG.vai('cruscotto'); }
+      catch (ex) { toast(ex.message, 'err'); }
+    });
+    via.onclick = () => occupato(via, async () => {
+      if (!(await conferma('Cancellare tutti i dati di esempio? Quello che hai inserito tu resta.', 'Cancella'))) return;
+      try { await FG.rpc('cancella_dati_esempio'); await caricaComuni(); toast('Dati di esempio cancellati', 'ok'); render(true); }
+      catch (ex) { toast(ex.message, 'err'); }
+    });
     const b = $('#d-json', v);
     b.onclick = () => occupato(b, async () => {
       const tabelle = ['impostazioni', 'categorie', 'fornitori', 'clienti', 'ricorrenze', 'prodotti', 'ricette', 'ricetta_righe', 'bolle', 'movimenti', 'entrate', 'entrata_righe',

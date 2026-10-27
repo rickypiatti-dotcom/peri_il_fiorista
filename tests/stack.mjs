@@ -20,7 +20,12 @@ export async function startDb() {
   await c.end();
   return () => new pg.Client({ connectionString: dbUrl() });
 }
+async function portaLibera(porta) {
+  const net = await import('node:net');
+  return new Promise((ok) => { const s = net.createServer().once('error', () => ok(false)).once('listening', () => s.close(() => ok(true))).listen(porta, '127.0.0.1'); });
+}
 export async function start(extraEnv = {}) {
+  for (const p of [CFG.pg, CFG.auth, CFG.rest]) if (!(await portaLibera(p))) throw new Error(`porta ${p} occupata: c'è un processo rimasto da una prova interrotta (ss -tlnp | grep ${p})`);
   const adminDb = await startDb();
   const APP = path.join(HERE, '.app');
   fs.rmSync(APP, { recursive: true, force: true }); fs.mkdirSync(APP, { recursive: true });

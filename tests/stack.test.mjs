@@ -245,6 +245,30 @@ try {
     assert.equal((await auth('login', { method: 'POST', body: { email: 'commesso@example.test', password: 'Commesso-1234' } })).status, 401);
     assert.equal((await auth('login', { method: 'POST', body: { email: 'commesso@example.test', password: 'NuovaPassword-99' } })).status, 200);
   });
+  console.log('Dati di esempio');
+  await prova('dati di esempio: rifiutati se ci sono già dati, e solo al titolare', async () => {
+    assert.ok((await rest('rpc/carica_dati_esempio', { method: 'POST', token: T, body: {} })).status >= 400);
+    assert.ok((await rest('rpc/carica_dati_esempio', { method: 'POST', token: S, body: {} })).status >= 400);
+  });
+  await prova('dati di esempio: un anno di negozio a gestionale vuoto, poi cancellati del tutto', async () => {
+    const db = adminDb(); await db.connect();
+    try {
+    for (const t of ['movimenti', 'entrata_righe', 'entrate', 'ordine_righe', 'ordini', 'bolle', 'chiusure', 'spese', 'ricorrenti', 'ricetta_righe', 'ricette', 'prodotti', 'ricorrenze', 'clienti', 'fornitori']) await db.query(`delete from ${t}`);
+    const t0 = Date.now();
+    const r = okR(await rest('rpc/carica_dati_esempio', { method: 'POST', token: T, body: {} }));
+    console.log(`      (${r.articoli} articoli, ${r.incassi} incassi, ${r.bolle} bolle, ${r.spese} spese in ${((Date.now() - t0) / 1000).toFixed(1)} s)`);
+    assert.ok(r.articoli >= 30 && r.incassi > 1000 && r.bolle > 90 && r.spese > 40);
+    const c = okR(await rest('rpc/cruscotto', { method: 'POST', token: T, body: {} }));
+    assert.ok(c.n_sotto_scorta > 0 && c.da_controllare.length > 0 && c.ordini.length >= 2 && c.bolle_da_fatturare > 0, JSON.stringify({ s: c.n_sotto_scorta, d: c.da_controllare.length, o: c.ordini.length, b: c.bolle_da_fatturare }));
+    const s = okR(await rest('rpc/statistiche', { method: 'POST', token: T, body: { p_da: '2025-01-01', p_a: '2030-01-01' } }));
+    assert.ok(s.articoli_categorie.length >= 5 && s.scarti.length > 0 && s.totali.entrate > s.totali.uscite * 0.5, JSON.stringify({ a: s.articoli_categorie.length, sc: s.scarti.length, e: s.totali.entrate, u: s.totali.uscite }));
+    const neg = (await db.query('select count(*)::int n from prodotti where giacenza < 0')).rows[0].n; assert.equal(neg, 0, 'nessuna giacenza negativa');
+    okR(await rest('rpc/cancella_dati_esempio', { method: 'POST', token: T, body: {} }));
+    for (const t of ['prodotti', 'entrate', 'movimenti', 'bolle', 'spese', 'ordini', 'clienti', 'fornitori', 'ricette', 'chiusure', 'ricorrenti'])
+      assert.equal((await db.query(`select count(*)::int n from ${t}`)).rows[0].n, 0, t + ' non vuota');
+    assert.ok((await db.query('select count(*)::int n from categorie')).rows[0].n > 30, 'le categorie restano');
+    } finally { await db.end(); }
+  });
 } finally {
   await stop();
 }
