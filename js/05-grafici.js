@@ -7,28 +7,30 @@
   // Colonne affiancate per mese: serie = [{ nome, colore, valori: [] }], etichette = []
   FG.colonne = (etichette, serie, { altezza = 220, linea } = {}) => {
     if (!etichette.length) return '<p class="muted">Nessun dato.</p>';
-    const max = Math.max(1, ...serie.flatMap((s) => s.valori.map((v) => Math.abs(v))), ...(linea ? linea.valori.map(Math.abs) : []));
+    const tutti = [...serie.flatMap((s) => s.valori), ...(linea ? linea.valori : [])].map(Number);
+    const max = Math.max(1, ...tutti), min = Math.min(0, ...tutti);
     const W = Math.max(320, etichette.length * (serie.length * 14 + 16)), H = altezza, base = H - 26, top = 10;
     const passo = W / etichette.length, larg = Math.min(26, (passo - 10) / serie.length);
-    const y = (v) => base - (Math.max(0, v) / max) * (base - top);
+    const y = (v) => base - ((v - min) / (max - min)) * (base - top); // anche i valori negativi (risultato in perdita) restano nel grafico
+    const zero = y(0);
     let g = '';
     for (let k = 0; k <= 4; k++) {
-      const v = (max * k) / 4, yy = y(v);
+      const v = min + ((max - min) * k) / 4, yy = y(v);
       g += `<line x1="0" x2="${W}" y1="${yy}" y2="${yy}" class="griglia"/><text x="2" y="${yy - 3}" class="asse">${esc(eur0(v))}</text>`;
     }
     etichette.forEach((et, i) => {
       const x0 = i * passo + (passo - larg * serie.length) / 2;
       serie.forEach((s, j) => {
         const v = s.valori[i] || 0, yy = y(v);
-        g += `<rect x="${x0 + j * larg}" y="${yy}" width="${larg - 2}" height="${Math.max(0, base - yy)}" rx="3" fill="${colore(s.colore)}"><title>${esc(et)} · ${esc(s.nome)}: ${esc(eur(v))}</title></rect>`;
+        g += `<rect x="${x0 + j * larg}" y="${Math.min(yy, zero)}" width="${larg - 2}" height="${Math.abs(zero - yy)}" rx="3" fill="${colore(s.colore)}"><title>${esc(et)} · ${esc(s.nome)}: ${esc(eur(v))}</title></rect>`;
       });
       g += `<text x="${i * passo + passo / 2}" y="${H - 8}" class="asse" text-anchor="middle">${esc(et)}</text>`;
     });
     if (linea) {
-      const pts = linea.valori.map((v, i) => `${i * passo + passo / 2},${base - (v / max) * (base - top)}`).join(' ');
+      const pts = linea.valori.map((v, i) => `${i * passo + passo / 2},${y(v)}`).join(' ');
+      g += `<line x1="0" x2="${W}" y1="${zero}" y2="${zero}" class="zero"/>`;
       g += `<polyline points="${pts}" fill="none" stroke="${colore(linea.colore)}" stroke-width="2.5" stroke-linejoin="round"/>`;
-      linea.valori.forEach((v, i) => { g += `<circle cx="${i * passo + passo / 2}" cy="${base - (v / max) * (base - top)}" r="3.5" fill="${colore(linea.colore)}"><title>${esc(etichette[i])} · ${esc(linea.nome)}: ${esc(eur(v))}</title></circle>`; });
-      g += `<line x1="0" x2="${W}" y1="${base}" y2="${base}" class="zero"/>`;
+      linea.valori.forEach((v, i) => { g += `<circle cx="${i * passo + passo / 2}" cy="${y(v)}" r="3.5" fill="${colore(linea.colore)}"><title>${esc(etichette[i])} · ${esc(linea.nome)}: ${esc(eur(v))}</title></circle>`; });
     }
     const leg = [...serie, ...(linea ? [linea] : [])].map((s) => `<span><i class="dot" style="background:${colore(s.colore)}"></i>${esc(s.nome)}</span>`).join('');
     return `<div class="grafico"><div class="scorri"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Grafico">${g}</svg></div><div class="legenda">${leg}</div></div>`;

@@ -53,7 +53,8 @@ window.FG = (() => {
 
   function toast(msg, kind = '') {
     const t = document.createElement('div'); t.className = 'toast ' + kind; t.textContent = msg;
-    $('#toasts').appendChild(t); setTimeout(() => t.remove(), kind === 'err' ? 8000 : 3500);
+    const box = $('#toasts'); box.appendChild(t); while (box.children.length > 3) box.firstElementChild.remove();
+    setTimeout(() => t.remove(), kind === 'err' ? 8000 : 3500);
   }
 
   // ------------------------------------------------------------ rete

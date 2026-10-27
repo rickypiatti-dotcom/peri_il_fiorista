@@ -52,7 +52,7 @@
     const saluto = ora < 13 ? 'Buongiorno' : ora < 18 ? 'Buon pomeriggio' : 'Buonasera';
     const metodi = Object.entries(c.oggi_metodi || {}).map(([m, v]) => `${esc(m)} ${esc(eur(v))}`).join(' · ');
     let h = `<header class="testa"><div><h1>${saluto}</h1><p class="muted">${esc(giorno(t).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</p></div>
-      ${modulo('cassa') ? '<a class="btn primary" href="#/cassa">＋ Nuova vendita</a>' : ''}</header>`;
+      ${modulo('cassa') ? '<a class="btn primary" href="#/cassa">+ Nuova vendita</a>' : ''}</header>`;
 
     h += '<section class="kpi">';
     h += kpi('Incassato oggi', eur(c.oggi.totale), `${c.oggi.n} ${c.oggi.n === 1 ? 'incasso' : 'incassi'}${metodi ? ' · ' + metodi : ''}`);

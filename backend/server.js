@@ -2,8 +2,9 @@
 //  POST /login, /refresh, GET /stream        login, rinnovo token, flusso SSE delle modifiche (come negli altri siti)
 //  POST /api/password {attuale, nuova}       cambio della propria password
 //  GET/POST /api/utenti, POST/DELETE /api/utenti/<id>, POST /api/utenti/<id>/password   utenti (solo titolare)
-//  POST /api/allegati?spesa=<id>&nome=<nome> carica un allegato (PDF/JPEG/PNG/WebP fino a 8 MB) su una spesa (solo titolare)
-//  GET  /api/allegati/<uuid>                 scarica un allegato (solo titolare, token nell'intestazione)
+//  POST /api/allegati?spesa=<id>|bolla=<id>&nome=<nome>  carica un allegato (PDF/JPEG/PNG/WebP fino a 8 MB)
+//                                            su una spesa (solo titolare) o su una bolla (tutto il personale)
+//  GET  /api/allegati/<uuid>                 scarica un allegato (stesse regole; token nell'intestazione)
 //  GET  /health
 import http from 'node:http';
 import fs from 'node:fs/promises';
@@ -337,28 +338,30 @@ function tipoFile(buf) {
 async function handleUpload(req, res, url) {
   const staff = await staffDa(req);
   if (!staff) return send(res, 401, { error: 'Accesso richiesto' });
-  if (staff.role !== 'owner') return send(res, 403, { error: 'Solo il titolare' });
-  const spesa = Number(url.searchParams.get('spesa'));
-  if (!Number.isInteger(spesa) || spesa <= 0) return send(res, 400, { error: 'Spesa mancante' });
+  const dove = url.searchParams.has('bolla') ? 'bolla' : 'spesa';
+  if (dove === 'spesa' && staff.role !== 'owner') return send(res, 403, { error: 'Solo il titolare' });
+  const id = Number(url.searchParams.get(dove));
+  if (!Number.isInteger(id) || id <= 0) return send(res, 400, { error: 'Manca la spesa o la bolla' });
   const nome = String(url.searchParams.get('nome') || 'documento').replace(/[\u0000-\u001f"\\/]/g, '').trim().slice(0, 160) || 'documento';
   let buf;
   try { buf = await readBody(req, 8 * 1024 * 1024); } catch (e) { return send(res, e.status || 400, { error: 'File troppo grande (massimo 8 MB)' }); }
   const tipo = tipoFile(buf);
   if (!tipo) return send(res, 415, { error: 'Formato non valido: usa PDF, JPEG, PNG o WebP' });
-  const { rows: s } = await pool.query('select 1 from public.spese where id = $1', [spesa]);
-  if (!s.length) return send(res, 404, { error: 'Spesa inesistente' });
-  const { rows } = await pool.query('insert into public.allegati (spesa_id, nome, tipo, dimensione, dati) values ($1, $2, $3, $4, $5) returning id',
-    [spesa, nome, tipo, buf.length, buf]);
+  const tabella = dove === 'bolla' ? 'public.bolle' : 'public.spese';
+  const { rows: s } = await pool.query(`select 1 from ${tabella} where id = $1`, [id]);
+  if (!s.length) return send(res, 404, { error: dove === 'bolla' ? 'Bolla inesistente' : 'Spesa inesistente' });
+  const { rows } = await pool.query(`insert into public.allegati (${dove}_id, nome, tipo, dimensione, dati) values ($1, $2, $3, $4, $5) returning id`,
+    [id, nome, tipo, buf.length, buf]);
   send(res, 201, { id: rows[0].id });
 }
 
 async function handleAllegato(req, res, id) {
   const staff = await staffDa(req);
   if (!staff) return send(res, 401, { error: 'Accesso richiesto' });
-  if (staff.role !== 'owner') return send(res, 403, { error: 'Solo il titolare' });
   if (!UUID.test(id)) return send(res, 404, { error: 'Non trovato' });
-  const { rows } = await pool.query('select nome, tipo, dati from public.allegati where id = $1', [id]);
+  const { rows } = await pool.query('select nome, tipo, dati, bolla_id from public.allegati where id = $1', [id]);
   if (!rows.length) return send(res, 404, { error: 'Non trovato' });
+  if (!rows[0].bolla_id && staff.role !== 'owner') return send(res, 403, { error: 'Solo il titolare' });
   res.writeHead(200, {
     'Content-Type': rows[0].tipo,
     'Content-Length': rows[0].dati.length,

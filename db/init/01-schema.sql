@@ -925,8 +925,11 @@ begin
       'bolle_da_fatturare', (select count(*) from public.bolle where spesa_id is null),
       'valore_magazzino', (select coalesce(sum(valore_cent), 0) from public.prodotti_vista where attivo),
       -- Punto di pareggio: spese medie mensili degli ultimi 12 mesi (o le ricorrenti, se più alte) e incasso al giorno che serve
-      'spesa_media_mese', (select coalesce(round(sum(importo_cent) / 12.0), 0) from public.spese
-                            where data > current_date - interval '12 months' and data <= current_date),
+      -- media sui mesi davvero registrati (al massimo 12): con un mese solo di storico non si divide per 12
+      'spesa_media_mese', (select coalesce(round(sum(importo_cent)::numeric / greatest(1, least(12,
+                              (extract(year from age(date_trunc('month', current_date), date_trunc('month', min(data)))) * 12
+                               + extract(month from age(date_trunc('month', current_date), date_trunc('month', min(data)))) + 1)::int))), 0)
+                            from public.spese where data > current_date - interval '12 months' and data <= current_date),
       'giorni_apertura', (select giorni_apertura from public.impostazioni where id = 1),
       'obiettivo_mese', (select obiettivo_mese_cent from public.impostazioni where id = 1),
       'mese_anno_scorso', (select coalesce(sum(totale_cent), 0) from public.entrate
