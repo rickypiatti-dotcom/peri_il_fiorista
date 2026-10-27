@@ -359,6 +359,7 @@ window.FG = (() => {
       if (n !== renderN) return; // nel frattempo si è cambiata pagina
       if (typeof html === 'string') v.innerHTML = html;
       const dopo = VIEWS[S.route].dopo; if (dopo) dopo(v, S.args);
+      if (FG.disegnaGrafici) FG.disegnaGrafici(v);
     } catch (e) {
       if (n === renderN) v.innerHTML = `<div class="alert err">${esc(e.message)}</div>`;
     }
