@@ -199,6 +199,12 @@ try {
   await pg.waitForSelector('.grafico svg'); await pg.waitForSelector('text=Dove vanno i soldi');
   await foto(pg, '13-statistiche'); pass('statistiche con grafici');
   await vai(pg, 'cruscotto'); await pg.waitForSelector('text=Ultimi 12 mesi'); await foto(pg, '14-cruscotto'); pass('cruscotto con dati');
+  // i colori (pos/neg) non devono cambiare l'impaginazione: «Risultato del mese» positivo era finito in una griglia a 2 colonne
+  await q("insert into entrate (totale_cent, metodo) values (100000, 'contanti')"); await vai(pg, 'cassa'); await vai(pg, 'cruscotto');
+  await pg.waitForSelector('.kpi-box.pos');
+  assert.deepEqual(await pg.$$eval('.pos, .neg', (e) => e.filter((x) => getComputedStyle(x).display === 'grid').map((x) => x.className)), []);
+  const box = await pg.$eval('.kpi-box.pos', (e) => { const s = e.querySelector('span').getBoundingClientRect(), b = e.querySelector('b').getBoundingClientRect(); return { sovrapposti: s.bottom > b.top + 1, righe: Math.round(s.height / 18) }; });
+  assert.ok(!box.sovrapposti && box.righe <= 1, JSON.stringify(box)); await foto(pg, '14b-cruscotto-positivo'); pass('riquadro «Risultato del mese» positivo: titolo su una riga, numero sotto');
   await vai(pg, 'clienti'); await pg.click('tr[data-id]'); await pg.waitForSelector('#cl-ric');
   await pg.fill('#cl-ric [name=d]', 'Anniversario'); await pg.fill('#cl-ric [name=g]', String(new Date().getDate()));
   await pg.selectOption('#cl-ric [name=m]', String(new Date().getMonth() + 1)); await pg.click('#cl-ric [type=submit]'); await toast(pg, 'Ricorrenza aggiunta');

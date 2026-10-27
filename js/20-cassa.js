@@ -27,7 +27,7 @@
     ]);
     if (!S.imp.metodi_incasso.includes(sc.metodo)) sc.metodo = S.imp.metodi_incasso[0];
     if (!catDi('entrata').some((c) => String(c.id) === sc.cat)) sc.cat = String((catDi('entrata')[0] || {}).id || '');
-    return `<header class="testa"><h1>Cassa</h1></header>${tabs('')}<div class="pos"><section class="pos-articoli" id="banco"></section><aside class="pos-carrello card" id="scontrino"></aside></div>
+    return `<header class="testa"><h1>Cassa</h1></header>${tabs('')}<div class="banco-layout"><section class="pos-articoli" id="banco"></section><aside class="pos-carrello card" id="scontrino"></aside></div>
       <button type="button" class="pos-barra" id="pos-barra" hidden></button>`;
   };
   VIEWS.cassa.dopo = (v, args) => {

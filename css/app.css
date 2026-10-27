@@ -172,8 +172,8 @@ td input.q, .voce input.q { width: 5.5rem; text-align: right; min-height: 36px; 
 .ciambella .centro { font-size: 15px; font-weight: 700; fill: var(--testo); }
 
 /* ---------------------------------------------------------- cassa */
-.pos { display: grid; grid-template-columns: 1fr minmax(320px, 400px); gap: 1rem; align-items: start; }
-.pos > *, .colonne2 > *, .colonne3 > * { min-width: 0; }
+.banco-layout { display: grid; grid-template-columns: 1fr minmax(320px, 400px); gap: 1rem; align-items: start; }
+.banco-layout > *, .colonne2 > *, .colonne3 > * { min-width: 0; }
 .pos-cerca { display: flex; gap: .5rem; margin-bottom: .7rem; }
 .chips { display: flex; gap: .35rem; overflow-x: auto; padding-bottom: .5rem; margin-bottom: .5rem; scrollbar-width: thin; }
 .chips button { border: 1px solid var(--bordo); background: var(--carta); border-radius: 99px; padding: .4rem .85rem; font: inherit; font-size: .88rem; white-space: nowrap; cursor: pointer; min-height: 38px; display: inline-flex; align-items: center; }
@@ -247,7 +247,7 @@ td input.q, .voce input.q { width: 5.5rem; text-align: right; min-height: 36px; 
 .toast.ok { background: var(--pos); } .toast.err { background: var(--neg); }
 
 /* ---------------------------------------------------------- tablet e telefono */
-@media (max-width: 1100px) { .pos { grid-template-columns: 1fr minmax(300px, 360px); } }
+@media (max-width: 1100px) { .banco-layout { grid-template-columns: 1fr minmax(300px, 360px); } }
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; }
   .side { position: fixed; inset: 0 auto 0 0; width: min(280px, 82vw); z-index: 40; transform: translateX(-102%); transition: transform .2s ease; box-shadow: 0 0 40px rgba(0, 0, 0, .25); }
@@ -256,7 +256,7 @@ td input.q, .voce input.q { width: 5.5rem; text-align: right; min-height: 36px; 
   .top b { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .top .btn.primary { background: #fff; color: var(--tema); border-color: #fff; }
   .main { padding: 1rem 16px 5rem; }
-  .pos { grid-template-columns: 1fr; }
+  .banco-layout { grid-template-columns: 1fr; }
   .pos-carrello { position: static; max-height: none; scroll-margin-top: 64px; }
   .pos-barra:not([hidden]) { display: flex; position: fixed; left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 35; align-items: center; justify-content: space-between; gap: .6rem;
     background: var(--tema); color: #fff; border: 0; border-radius: 14px; padding: .8rem 1rem; font: inherit; box-shadow: 0 8px 24px rgba(0, 0, 0, .25); cursor: pointer; }
