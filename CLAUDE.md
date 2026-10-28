@@ -91,6 +91,12 @@ Nome mostrato di default: «Il Fiorista» (si cambia da Impostazioni; il reposit
 - Campi numerici (`inputmode="decimal"`): al primo tocco/clic si seleziona tutto (`00-base.js`), così si scrive sopra. Bug del 27 ott: toccando il prezzo il cursore finiva in mezzo («3,00» + «4,50» = «3,4,5000»), il valore veniva scartato in silenzio e tornava il vecchio.
 - Scontrino: quantità, prezzo e sconto aggiornano i totali MENTRE si scrive, senza ridisegnare (un ridisegno sul «change» faceva perdere il tocco su «Incassa»). Un valore sbagliato resta, in rosso, con messaggio, e blocca l'incasso.
 
+## Indirizzo pubblico (28 ott 2026, sera): https://fiorista.plateslab.app
+- Dominio `plateslab.app` comprato da Riccardo il 28 ott 2026 (Cloudflare Registrar, NS kip/nelly; `.app` = solo HTTPS). Idea: un sottodominio per ogni gestionale futuro.
+- Tunnel `plates_lab`: route «Published application routes» `fiorista.plateslab.app` → HTTP `localhost:80`. In Coolify, servizio `web`: `http://fiorista.100.112.89.10.sslip.io,http://fiorista.plateslab.app` (Coolify ha aggiunto da solo anche `http://www.fiorista.plateslab.app`: inutile, il certificato non copre due livelli; si può togliere).
+- **Tailscale Funnel 10000 SPENTO** (era il vecchio indirizzo pubblico `plateslab.tailea1e9a.ts.net:10000`). Commit 90b7561: `TRUST_CF_HEADER: "1"` + `real_ip_header CF-Connecting-IP` in nginx → limite dei login PER VISITATORE (verificato: 429 «Troppi tentativi» solo per l'IP che sbaglia). **Non riaccendere il Funnel sulla 8094 con queste impostazioni** (l'intestazione sarebbe falsificabile): prima rimettere "0" e togliere real_ip.
+- Cloudflare (zona plateslab.app), messe da Riccardo e verificate: 4 regole WAF Block (percorsi da scanner, metodi diversi da GET/HEAD/POST/PATCH/DELETE/OPTIONS, programmi di attacco/UA vuoto, **solo dall'Italia**: se il fiorista va all'estero spegnere quella regola), rate limit `POST /auth/login` 5/10 s per IP, Bot Fight Mode, Security Level. Il bouncer CrowdSec (Worker) NON è su questo dominio; CrowdSec vede comunque il traffico dal registro di Traefik.
+
 ## Stato (27 ott 2026, notte)
 - IN PROVA su http://fiorista.100.112.89.10.sslip.io (solo VPN), app Coolify `peri_il_fiorista` uuid `6hmdqlqmpqlgua97mkgkkm2j`. Deploy automatico dopo ogni push (autorizzazione permanente di Riccardo).
 - Commit in produzione (codici dopo la riscrittura della storia del 27 ott): f3a9e13 (completo) → 025050b (riquadro «Risultato del mese»: la classe colore `.pos` era anche l'impaginazione della cassa, ora `.banco-layout`)
