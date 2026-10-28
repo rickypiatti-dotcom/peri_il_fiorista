@@ -198,7 +198,7 @@
         <label class="f w2"><span>Tipo di incasso</span><select name="cat">${catDi('entrata').map((c) => `<option value="${c.id}">${esc(c.nome)}</option>`).join('')}</select></label>
         <label class="f w2"><span>IVA media</span><select name="iva">${[10, 22, 4, 5, 0].map((a) => `<option value="${a}"${Number(S.imp.aliquota_default) === a ? ' selected' : ''}>${a}%</option>`).join('')}</select></label>
         <label class="f w2"><span>Numero chiusura (Z)</span><input name="doc" maxlength="60" placeholder="facoltativo"></label>
-        ${S.imp.metodi_incasso.map((m) => `<label class="f w2"><span>${esc(cap(m))}${FG.separato(m) ? ' <small class="muted">· contabilità a parte 🌸</small>' : ''}</span><div class="euro"><input data-met="${esc(m)}" inputmode="decimal" placeholder="0,00"><span>€</span></div></label>`).join('')}
+        ${S.imp.metodi_incasso.map((m) => `<label class="f w2"><span>${esc(cap(m))}</span><div class="euro"><input data-met="${esc(m)}" inputmode="decimal" placeholder="0,00"><span>€</span></div></label>`).join('')}
       </div><div class="carr-totale"><span>Totale</span><b id="gg-tot">${esc(eur(0))}</b></div>
       <p class="alert err" hidden></p><div class="azioni"><button class="btn primary" type="submit">Registra</button></div></form></section>`;
   }

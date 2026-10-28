@@ -10,9 +10,9 @@ try {
   const pg = await A.nuova();
   await A.entra(pg);
 
-  await prova('totale di giornata: il campo «Altro» avvisa che va nella contabilità a parte', async () => {
+  await prova('totale di giornata: il campo si chiama solo «Altro» (senza scritte accanto, richiesta di Riccardo del 28 ott)', async () => {
     await A.vai(pg, 'cassa/giornata');
-    assert.match(await testo(pg, '#gg'), /Altro\s*· contabilità a parte/);
+    assert.equal(await pg.$eval('[data-met="altro"]', (i) => i.closest('label').querySelector('span').innerText.trim()), 'Altro');
     await pg.fill('[data-met="contanti"]', '300'); await pg.fill('[data-met="carta"]', '200'); await pg.fill('[data-met="altro"]', '150');
     await pg.click('#gg [type=submit]');
     await A.toast(pg, 'Totale di giornata registrato');
