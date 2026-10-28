@@ -34,7 +34,7 @@
         ${vis.map((p) => `<tr data-id="${p.id}" tabindex="0"><td><b>${esc(p.nome)}</b>${p.nome_botanico ? `<br><small class="muted"><i>${esc(p.nome_botanico)}</i></small>` : ''}${p.codice ? `<br><small class="muted">${esc(p.codice)}</small>` : ''}</td>
           <td>${pallino(p.categoria_colore)}${esc(p.categoria || '—')}</td>
           <td class="n">${p.a_magazzino ? `<b class="${p.giacenza <= 0 ? 'neg' : p.sotto_scorta ? 'att' : ''}">${esc(num(p.giacenza))}</b> ${esc(p.unita)}${p.sotto_scorta ? '<br><small class="att">sotto scorta</small>' : ''}${p.da_controllare ? `<br><small class="neg">arrivati da ${p.giorni_da_carico} gg</small>` : ''}` : '<small class="muted">servizio</small>'}</td>
-          ${tit ? `<td class="n">${esc(eur(p.prezzo_acquisto_cent))}</td>` : ''}<td class="n">${esc(eur(p.prezzo_vendita_cent))}</td>${tit ? `<td class="n">${esc(perc(margine(p)))}</td><td class="n">${esc(eur(p.valore_cent))}</td>` : ''}</tr>`).join('')}
+          ${tit ? `<td class="n">${esc(eur(p.prezzo_acquisto_cent))}</td>` : ''}<td class="n">${p.prezzo_vendita_cent ? esc(eur(p.prezzo_vendita_cent)) : '<small class="muted">in cassa</small>'}</td>${tit ? `<td class="n">${esc(perc(margine(p)))}</td><td class="n">${esc(eur(p.valore_cent))}</td>` : ''}</tr>`).join('')}
         </tbody></table></div>` : vuoto(lista.length ? 'Nessun articolo con questi filtri.' : 'Il magazzino è vuoto: aggiungi il primo articolo o registra un arrivo di merce.')}`;
   };
   VIEWS.magazzino.dopo = (v, args) => {
@@ -62,7 +62,7 @@
     { sez: 'Prezzi' },
     ...(isOwner() ? [{ k: 'prezzo_acquisto_cent', l: 'Costo d\'acquisto (IVA esclusa)', t: 'money', w: 3, help: 'si aggiorna da solo con l\'ultima bolla' }] : []),
     { k: 'aliquota_iva', l: 'IVA', t: 'select', vuoto: false, o: [[10, '10% (piante e fiori)'], [22, '22% (vasi, accessori)'], [4, '4%'], [5, '5%'], [0, '0%']], w: 3 },
-    { k: 'prezzo_vendita_cent', l: 'Prezzo di vendita (IVA inclusa)', t: 'money', w: 3 },
+    { k: 'prezzo_vendita_cent', l: 'Prezzo di vendita (IVA inclusa)', t: 'money', w: 3, help: 'facoltativo: vuoto = si scrive in cassa' },
     { sez: 'Magazzino' },
     { k: 'a_magazzino', l: 'Si tiene a magazzino', t: 'bool', help: 'togli la spunta per i servizi (consegna, confezione regalo)' },
     { k: 'scorta_minima', l: 'Scorta minima', t: 'qty', w: 3, help: `vuoto = ${num(S.imp.scorta_minima)} (Impostazioni)` },

@@ -63,7 +63,7 @@
       <h3 class="sez">Voci ${prev ? 'del preventivo' : 'dell\'ordine'} <small class="muted">(prezzi IVA compresa)</small></h3>
       <div id="om-voci"></div>
       <div class="azioni sinistra"><button type="button" class="btn sm" id="om-piu">+ Voce</button>
-        ${ricette.length ? `<select id="om-ric" class="sm"><option value="">+ Da una composizione…</option>${ricette.map((r) => `<option value="${r.id}">${esc(r.nome)} · ${esc(eur(r.prezzo_vendita_cent))}</option>`).join('')}</select>` : ''}
+        ${ricette.length ? `<select id="om-ric" class="sm"><option value="">+ Da una composizione…</option>${ricette.map((r) => `<option value="${r.id}">${esc(r.nome)}${r.prezzo_vendita_cent ? ' · ' + esc(eur(r.prezzo_vendita_cent)) : ''}</option>`).join('')}</select>` : ''}
         <span class="spazio"></span><b>Totale <span id="om-tot"></span></b></div>
       <div class="grid-form">
         ${prev ? `<label class="f w2"><span>Valido fino al</span><input type="date" name="valido_fino" value="${esc(val.valido_fino || '')}"></label>

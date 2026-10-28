@@ -12,9 +12,9 @@
       ${lista.length ? `<ul class="cards">${lista.map((r) => {
         const netto = r.prezzo_vendita_cent / (1 + Number(r.aliquota_iva) / 100), m = netto > 0 ? r.margine_cent / netto : null;
         return `<li><button type="button" class="card ricetta-card${r.attiva ? '' : ' spenta'}" data-id="${r.id}">
-          <div class="o-testa"><b>${esc(r.nome)}</b><span>${esc(eur(r.prezzo_vendita_cent))}</span></div>
+          <div class="o-testa"><b>${esc(r.nome)}</b><span>${r.prezzo_vendita_cent ? esc(eur(r.prezzo_vendita_cent)) : '<small class="muted">prezzo in cassa</small>'}</span></div>
           ${isOwner() ? `<dl class="mini-dati"><dt>Materiali</dt><dd>${esc(eur(r.costo_materiali_cent))}</dd>${r.manodopera_cent ? `<dt>Lavoro</dt><dd>${esc(eur(r.manodopera_cent))}</dd>` : ''}
-          <dt>Margine</dt><dd class="${r.margine_cent < 0 ? 'neg' : 'pos'}">${esc(eur(r.margine_cent))} (${esc(perc(m))})</dd>
+          ${r.prezzo_vendita_cent ? `<dt>Margine</dt><dd class="${r.margine_cent < 0 ? 'neg' : 'pos'}">${esc(eur(r.margine_cent))} (${esc(perc(m))})</dd>` : ''}
           <dt>Consigliato</dt><dd>${esc(eur(r.prezzo_consigliato_cent))}</dd></dl>` : ''}
           <small class="${r.possibili === 0 ? 'neg' : 'muted'}">${r.componenti ? `${r.componenti} componenti · ${r.possibili == null ? '' : r.possibili > 0 ? `materiale per ${r.possibili}` : 'manca materiale'}` : 'nessun componente'}${r.attiva ? '' : ' · disattivata'}</small></button></li>`;
       }).join('')}</ul>` : vuoto('Nessuna composizione. Creane una: es. «Bouquet rose rosse 12 steli» con 12 rose, 3 rami di verde, carta e nastro.')}`;
@@ -44,7 +44,7 @@
       <div class="grid-form">
         ${tit ? `<label class="f w3"><span>Costo del lavoro</span><div class="euro"><input name="manodopera" inputmode="decimal" value="${esc(euroInput(v.manodopera_cent))}" placeholder="0,00"><span>€</span></div><small>facoltativo: il tuo tempo</small></label>` : ''}
         <label class="f w3"><span>Minuti di lavoro</span><input name="minuti" inputmode="numeric" value="${esc(v.minuti ?? '')}"></label>
-        <label class="f w3"><span>Prezzo di vendita (IVA inclusa) *</span><div class="euro"><input name="prezzo" inputmode="decimal" value="${esc(euroInput(v.prezzo_vendita_cent))}"><span>€</span></div></label>
+        <label class="f w3"><span>Prezzo di vendita (IVA inclusa)</span><div class="euro"><input name="prezzo" inputmode="decimal" value="${esc(v.prezzo_vendita_cent ? euroInput(v.prezzo_vendita_cent) : '')}" placeholder="facoltativo"><span>€</span></div><small>vuoto = si scrive in cassa</small></label>
       </div>
       <div class="calcolo" id="r-calc"></div>
       <label class="f"><span>Note (come si fa, varianti di stagione)</span><textarea name="note" rows="2" maxlength="2000">${esc(v.note || '')}</textarea></label>
@@ -91,9 +91,10 @@
       occupato(f.querySelector('[type=submit]'), async () => {
         err.hidden = true;
         try {
-          const prezzo = cent(f.prezzo.value), lavoro = tit ? cent(f.manodopera.value) || 0 : 0, minuti = f.minuti.value.trim() ? Number(f.minuti.value) : null;
+          // prezzo facoltativo: vuoto = 0, si scrive in cassa al momento della vendita
+          const prezzo = cent(f.prezzo.value) ?? 0, lavoro = tit ? cent(f.manodopera.value) || 0 : 0, minuti = f.minuti.value.trim() ? Number(f.minuti.value) : null;
           if (f.nome.value.trim().length < 2) throw new Error('Scrivi il nome');
-          if (prezzo == null || Number.isNaN(prezzo) || prezzo < 0) throw new Error('Prezzo di vendita non valido');
+          if (Number.isNaN(prezzo) || prezzo < 0) throw new Error('Prezzo di vendita non valido');
           if (Number.isNaN(lavoro) || lavoro < 0 || (minuti != null && !(Number.isInteger(minuti) && minuti >= 0))) throw new Error('Controlla lavoro e minuti');
           const buoni = comp.filter((c) => c.prodotto_id);
           if (buoni.some((c) => !(c.quantita > 0))) throw new Error('Ogni componente ha bisogno di una quantità');

@@ -30,6 +30,15 @@ Nome mostrato di default: «Il Fiorista» (si cambia da Impostazioni; il reposit
   - PostgREST dà al massimo 5000 righe per richiesta (`PGRST_DB_MAX_ROWS`): le liste con totali o CSV (incassi, movimenti, spese, Altro, dati per il commercialista) leggono con `FG.getTutti()` (a pagine, serve un `order` stabile) e disegnano al massimo 1000 righe (`righeVisibili`/`notaRighe`). Prima incassi e CSV si fermavano a 2000/5000 righe in silenzio.
   - Voci di ordini e componenti delle composizioni: prima si scrivono le nuove (composizioni con upsert `on_conflict=ricetta_id,prodotto_id`), POI si tolgono le vecchie per id. Mai più «cancella tutto e riscrivi».
   - `FG.conferma` chiusa con ×/Esc/tocco fuori = «no» (prima restava in sospeso e il pulsante restava su «Attendi…»). `FG.stampa` non toglie più il foglio dopo 2 s (iPad).
+- **Totale di giornata con l'IVA divisa per aliquota (migrazione `005_iva_giornata.sql`, 28 ott 2026, richiesta di Riccardo)**: `registra_giornata(p)` accetta
+  `iva: [{aliquota, importo_cent}]` oltre a `importi` per metodo; le due somme devono coincidere. Crea un incasso (importo libero, NIENTE righe di vendita:
+  non deve finire negli «articoli venduti») per ogni metodo × aliquota, descrizione `Totale di giornata (metodo · IVA 22%)` (con una sola aliquota come prima).
+  Divisione: ogni aliquota tranne l'ultima si divide tra i metodi in proporzione al resto di ciascun metodo (resti più grandi); l'ultima prende quel che resta:
+  totali per metodo e per aliquota esatti al centesimo; poi l'IVA di ogni aliquota = `iva_di` del suo totale (la differenza va sull'incasso più grande).
+  Senza `iva` vale ancora il formato vecchio (`aliquota_iva` unica). Nella pagina una riga IVA vuota prende il resto. «altro» compreso nel totale (come lo Z).
+- **Prezzo di vendita facoltativo** (articoli e composizioni, 28 ott 2026): vuoto = 0, in cassa «prezzo a mano», il cursore va sul prezzo e a 0 € l'incasso chiede conferma (omaggio).
+  Le statistiche già contavano l'incasso vero (`entrata_righe.totale_cent`) e il costo del fornitore (`costo_unit_cent`), non il listino; il listino serve solo a proporre il prezzo
+  e al «valore a prezzo di vendita» del magazzino (lì un articolo senza prezzo vale 0).
 - Tutte le funzioni di `public` sono revocate a tutti e concesse una per una (PostgreSQL le dà a PUBLIC per default).
 - Importi in centesimi. Incassi e spese LORDI con l'IVA a parte; costo d'acquisto degli articoli IVA ESCLUSA, prezzo di vendita IVA INCLUSA.
 - Giacenza = somma dei movimenti (trigger): non si scrive a mano. Carichi solo da `registra_carico` (crea la BOLLA).
@@ -74,7 +83,7 @@ Nome mostrato di default: «Il Fiorista» (si cambia da Impostazioni; il reposit
 - Le finestre più alte dello schermo vanno fotografate allungando il viewport (`scatta(..., { el })`), altrimenti la parte fuori schermo esce vuota; Chromium con `--lang=it-IT` per date/ore italiane.
 
 ## Prove
-`tests/README.md`: `stack.test.mjs` (47, anche dati di esempio), `commesso.test.mjs` (14, permessi del commesso via API; senza la migrazione 002 ne falliscono 10), `browser.test.mjs` (30, percorso completo) `cassa.test.mjs` (40, tutta la cassa anche al telefono + commesso a schermo), `altro.test.mjs` (7, contabilità «altro» separata via API) `altro-browser.test.mjs` (10, pagina Altro dal fiore, computer/telefono/commesso) `date-filtri.test.mjs` (14, pulsante Cerca delle date) e `controllo.test.mjs` (19, difetti del controllo completo del 28 ott). Prima di ogni push: tutte verdi.
+`tests/README.md`: `stack.test.mjs` (47, anche dati di esempio), `commesso.test.mjs` (14, permessi del commesso via API; senza la migrazione 002 ne falliscono 10), `browser.test.mjs` (30, percorso completo) `cassa.test.mjs` (40, tutta la cassa anche al telefono + commesso a schermo), `altro.test.mjs` (7, contabilità «altro» separata via API) `altro-browser.test.mjs` (10, pagina Altro dal fiore, computer/telefono/commesso) `date-filtri.test.mjs` (14, pulsante Cerca delle date) e `controllo.test.mjs` (19, difetti del controllo completo del 28 ott), `iva-giornata.test.mjs` (12, righe IVA del totale di giornata con 500 giornate casuali + prezzo facoltativo). Prima di ogni push: tutte verdi.
 - `tests/ambiente.mjs` = stack + nginx + Chromium riusabile per altre suite (`avvia(porta)`, `nuova({ telefono })`, `entra`, `vai` (usa `FG.vai`, ridisegna anche la pagina già aperta), `utente`).
 - Se una prova si interrompe a metà può restare acceso PostgREST sulla 3110: le prove successive parlano con quello VECCHIO (funzioni nuove «non trovate»). `stack.mjs` ora si ferma e dice la porta occupata.
 - Nelle prove: dopo un incasso si aspetta la riga nuova nel database (non l'avviso: quello precedente può essere ancora a schermo).

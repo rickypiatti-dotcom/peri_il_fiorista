@@ -233,6 +233,11 @@ td input.q, .voce input.q { width: 5.5rem; text-align: right; min-height: 36px; 
 .o-soldi { display: flex; gap: .6rem; align-items: baseline; margin-top: auto; padding-top: .3rem; font-weight: 700; flex-wrap: wrap; }
 .voce { display: flex; gap: .45rem; align-items: center; margin-bottom: .45rem; flex-wrap: wrap; }
 .voce > input:first-child, .voce > select:first-child { flex: 1 1 220px; }
+/* totale di giornata: una riga per aliquota (importo, aliquota e ✕ sulla stessa riga, anche al telefono) */
+.gg-iva-riga { display: flex; gap: .6rem 1rem; align-items: flex-end; margin-bottom: .6rem; }
+.gg-iva-riga > .f:first-child { flex: 1 1 0; }
+.gg-iva-riga > .f + .f { flex: 0 0 7.5rem; }
+.gg-iva-riga > .link { min-height: 44px; padding: 0 .35rem; }
 .dialog .grid-form + .grid-form { margin-top: .75rem; }
 .suggerito { margin: .5rem 0 0; }
 .calcolo { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .6rem; background: var(--tema-chiaro); padding: .8rem; border-radius: 10px; margin: .8rem 0; }

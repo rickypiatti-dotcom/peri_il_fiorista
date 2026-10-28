@@ -105,6 +105,19 @@ try {
     await pg.click('[data-pr="0"]'); await pg.keyboard.type('7'); await pg.click('#scontrino h2'); assert.equal(await pg.inputValue('[data-pr="0"]'), '7,00');
     await pg.click('#s-svuota');
   });
+  await prova('prezzo facoltativo (28 ott): riquadro «prezzo a mano», cursore sul prezzo, a 0 € chiede conferma', async () => {
+    assert.ok((await testo(pg, '.tile:has-text("Senza prezzo")')).includes('prezzo a mano'));
+    await pg.click('.tile:has-text("Senza prezzo")');
+    assert.equal(await pg.evaluate(() => document.activeElement.dataset.pr), '0');
+    const prima = await ultimoId();
+    await pg.click('#s-ok'); await pg.waitForSelector('#modal:not([hidden]) [data-si]');
+    assert.ok((await testo(pg, '#modal')).includes('Senza prezzo: prezzo 0 €'));
+    await pg.click('#modal [data-no]'); await pg.waitForTimeout(300);
+    assert.equal(await ultimoId(), prima, 'con «Annulla» non si incassa');
+    await pg.click('[data-pr="0"]'); await pg.keyboard.type('6,50'); await incassa(pg);
+    const e = await ultimaEntrata(); assert.equal(e.totale_cent, 650);
+    const [r] = await q('select * from entrata_righe where entrata_id = $1', [e.id]); assert.equal(r.descrizione, 'Senza prezzo'); assert.equal(r.prezzo_unit_cent, 650);
+  });
   await prova('sconto: si applica subito e non supera il totale', async () => {
     await pg.click('.tile:has-text("Vaso ceramica")');
     await pg.click('#s-sconto'); await pg.keyboard.type('2');
@@ -208,7 +221,8 @@ try {
   });
   await prova('un incasso per ogni metodo, con data, tipo, IVA e numero di chiusura; totale in diretta', async () => {
     await pg.fill('#gg [name=data]', ieri);
-    await pg.selectOption('#gg [name=cat]', { label: 'Vendita al banco' }); await pg.selectOption('#gg [name=iva]', '22');
+    // una sola riga IVA lasciata vuota = tutto il totale a quell'aliquota (come la vecchia «IVA media»)
+    await pg.selectOption('#gg [name=cat]', { label: 'Vendita al banco' }); await pg.selectOption('#gg [data-iva="0"]', '22');
     await pg.fill('#gg [name=doc]', 'Z 0042');
     await pg.fill('[data-met="contanti"]', '350,50'); await pg.fill('[data-met="carta"]', '120'); await pg.fill('[data-met="satispay"]', '0');
     assert.equal(await testo(pg, '#gg-tot'), euro(47050));
@@ -221,6 +235,29 @@ try {
   });
   await prova('non si può mettere una data futura', async () => {
     assert.equal(await (await pg.evaluate(() => { location.hash = '#/cassa/giornata'; }), pg.waitForSelector('#gg'), pg.getAttribute('#gg [name=data]', 'max')), oggi());
+  });
+  await prova('righe IVA (28 ott): una riga vuota prende il resto, avviso se non tornano, un incasso per metodo × aliquota', async () => {
+    const [{ d }] = await q('select (current_date - 3)::text d');
+    await pg.fill('#gg [name=data]', d); await pg.fill('#gg [name=doc]', 'Z 0099');
+    await pg.fill('[data-met="contanti"]', '90'); await pg.fill('[data-met="carta"]', '60');
+    await pg.selectOption('#gg [data-iva="0"]', '10');
+    await pg.click('#gg-iva-piu'); await pg.selectOption('#gg [data-iva="1"]', '22'); await pg.fill('#gg [data-ivi="1"]', '50');
+    assert.match(await testo(pg, '#gg-quadra'), /100,00.*al 10%.*50,00.*al 22%/);
+    // due righe scritte che non tornano col totale: avviso in diretta, e al salvataggio niente registrato
+    await pg.fill('#gg [data-ivi="0"]', '90');
+    assert.match(await testo(pg, '#gg-quadra'), /devono essere uguali/);
+    const prima = await quanteEntrate();
+    await pg.click('#gg [type=submit]'); assert.match(await testo(pg, '#gg .alert'), /devono essere uguali/);
+    assert.equal(await quanteEntrate(), prima);
+    // tolta la terza riga aggiunta per sbaglio con ✕, la prima torna vuota (= resto)
+    await pg.click('#gg-iva-piu'); assert.equal(await pg.locator('#gg .gg-iva-riga').count(), 3);
+    await pg.click('#gg [data-ivx="2"]'); assert.equal(await pg.locator('#gg .gg-iva-riga').count(), 2);
+    await pg.fill('#gg [data-ivi="0"]', '');
+    await pg.click('#gg [type=submit]'); await pg.waitForSelector('.tabs a.on:has-text("Incassi")');
+    const r = await q("select metodo, totale_cent, iva_cent from entrate where numero_documento = 'Z 0099' order by metodo, totale_cent");
+    assert.deepEqual(r.map((x) => [x.metodo, x.totale_cent]), [['carta', 2000], ['carta', 4000], ['contanti', 3000], ['contanti', 6000]]);
+    assert.equal(r.reduce((a, x) => a + x.iva_cent, 0), Math.round(10000 - 10000 / 1.1) + Math.round(5000 - 5000 / 1.22));
+    await q("delete from entrate where numero_documento = 'Z 0099'"); // il resto della suite conta gli incassi
   });
 
   // ============================================================ INCASSI

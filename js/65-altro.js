@@ -44,7 +44,7 @@
     const perGiorno = raggruppa((r) => { const w = new Date(r.data + 'T12:00').getDay() || 7; return [String(w), S.imp.colore_tema]; })
       .sort((a, b) => a.nome - b.nome).map((x) => ({ ...x, nome: cap(GIORNI[x.nome]) }));
 
-    return `<header class="testa"><div><h1>🌸 Altro</h1><p class="muted">Contabilità separata dei pagamenti «altro» (buoni regalo). Questi incassi non sono nel cruscotto, nelle statistiche, nell'elenco incassi né nella chiusura di cassa.</p></div>
+    return `<header class="testa"><div><h1>🌸 Altro</h1></div>
       <div class="azioni"><button class="btn" type="button" id="al-csv"${righe.length ? '' : ' disabled'}>⬇ Scarica CSV</button><button class="btn" type="button" id="al-stampa">🖨 Stampa</button></div></header>
       <form class="filtri" id="al-f">
         <div class="rapidi">${PERIODI.map(([k, t]) => `<button type="button" class="chip${P.chiave === k ? ' on' : ''}" data-k="${k}">${t}</button>`).join('')}</div>

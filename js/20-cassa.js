@@ -53,8 +53,8 @@
         ${cat.ricette.length ? `<button type="button" data-f="comp" class="${filtro === 'comp' ? 'on' : ''}">🌸 Composizioni</button>` : ''}
         ${[...gruppi.values()].map((p) => `<button type="button" data-f="${p.categoria_id}" class="${filtro === String(p.categoria_id) ? 'on' : ''}">${FG.pallino(p.categoria_colore)}${esc(p.categoria)}</button>`).join('')}</div>
       <div class="tiles">
-        ${ricette.map((r) => `<button type="button" class="tile ricetta" data-r="${r.id}"><b>${esc(r.nome)}</b><span>${esc(eur(r.prezzo_vendita_cent))}</span><small>${r.possibili == null ? 'composizione' : r.possibili > 0 ? `materiale per ${r.possibili}` : '⚠️ manca materiale'}</small></button>`).join('')}
-        ${prodotti.map((p) => `<button type="button" class="tile" data-p="${p.id}" style="--c:${esc(p.categoria_colore || '#999999')}"><b>${esc(p.nome)}</b><span>${esc(eur(p.prezzo_vendita_cent))}${p.unita !== 'pz' ? ' / ' + esc(p.unita) : ''}</span><small class="${p.a_magazzino && p.giacenza <= 0 ? 'neg' : ''}">${p.a_magazzino ? esc(num(p.giacenza)) + ' ' + esc(p.unita) : 'servizio'}</small></button>`).join('')}
+        ${ricette.map((r) => `<button type="button" class="tile ricetta" data-r="${r.id}"><b>${esc(r.nome)}</b><span>${r.prezzo_vendita_cent ? esc(eur(r.prezzo_vendita_cent)) : 'prezzo a mano'}</span><small>${r.possibili == null ? 'composizione' : r.possibili > 0 ? `materiale per ${r.possibili}` : '⚠️ manca materiale'}</small></button>`).join('')}
+        ${prodotti.map((p) => `<button type="button" class="tile" data-p="${p.id}" style="--c:${esc(p.categoria_colore || '#999999')}"><b>${esc(p.nome)}</b><span>${p.prezzo_vendita_cent ? esc(eur(p.prezzo_vendita_cent)) + (p.unita !== 'pz' ? ' / ' + esc(p.unita) : '') : 'prezzo a mano'}</span><small class="${p.a_magazzino && p.giacenza <= 0 ? 'neg' : ''}">${p.a_magazzino ? esc(num(p.giacenza)) + ' ' + esc(p.unita) : 'servizio'}</small></button>`).join('')}
       </div>${!prodotti.length && !ricette.length ? `<p class="muted">${q ? 'Nessun risultato.' : 'Ancora nessun articolo: si aggiungono da Magazzino.'} Per vendere comunque usa «Importo libero».</p>` : ''}`;
     const inp = $('#banco-q');
     inp.oninput = () => { ricerca = inp.value; const pos = inp.selectionStart; disegnaBanco(); const n = $('#banco-q'); n.focus(); n.setSelectionRange(pos, pos); };
@@ -76,6 +76,8 @@
     if (uguale) uguale.quantita = Math.round((uguale.quantita + 1) * 100) / 100;
     else sc.voci.push({ quantita: 1, ...v });
     memo(); disegnaScontrino();
+    // articolo/composizione senza prezzo: si scrive subito nello scontrino
+    if (!v.prezzo && (v.prodotto_id || v.ricetta_id)) { const el = $(`[data-pr="${sc.voci.indexOf(uguale || sc.voci[sc.voci.length - 1])}"]`); if (el) { el.focus(); el.select(); } }
   }
 
   function importoLibero() {
@@ -173,6 +175,8 @@
     const sbagliato = $('#scontrino .sbagliato');
     if (sbagliato) { errore('Correggi il campo in rosso prima di incassare (es. 4,50)'); sbagliato.focus(); return; }
     if (sc.sconto > lordo()) sc.sconto = lordo();
+    const zero = sc.voci.filter((v) => !v.prezzo);
+    if (zero.length && !(await conferma(`${zero.map((v) => v.nome).join(', ')}: prezzo 0 €. Scrivi il prezzo nello scontrino, oppure incassa lo stesso (es. omaggio).`, 'Incassa lo stesso', false))) return;
     const totale = daPagare();
     try {
       await rpc('registra_vendita', { p: {
@@ -196,16 +200,56 @@
         ${isOwner() ? `<label class="f w2"><span>Giorno</span><input type="date" name="data" value="${oggi()}" max="${oggi()}" required></label>`
           : `<p class="f w2 muted">Giorno: <b>oggi, ${esc(dataIt(oggi()))}</b></p>`}
         <label class="f w2"><span>Tipo di incasso</span><select name="cat">${catDi('entrata').map((c) => `<option value="${c.id}">${esc(c.nome)}</option>`).join('')}</select></label>
-        <label class="f w2"><span>IVA media</span><select name="iva">${[10, 22, 4, 5, 0].map((a) => `<option value="${a}"${Number(S.imp.aliquota_default) === a ? ' selected' : ''}>${a}%</option>`).join('')}</select></label>
         <label class="f w2"><span>Numero chiusura (Z)</span><input name="doc" maxlength="60" placeholder="facoltativo"></label>
+      </div>
+      <h3 class="sez">Divisione per IVA</h3>
+      <p class="muted">Una riga per ogni aliquota della chiusura del registratore. Una riga lasciata vuota prende il resto del totale.</p>
+      <div id="gg-iva"></div>
+      <div class="azioni sinistra"><button type="button" class="btn sm" id="gg-iva-piu">+ Aliquota</button></div>
+      <h3 class="sez">Pagamenti</h3>
+      <div class="grid-form">
         ${S.imp.metodi_incasso.map((m) => `<label class="f w2"><span>${esc(cap(m))}</span><div class="euro"><input data-met="${esc(m)}" inputmode="decimal" placeholder="0,00"><span>€</span></div></label>`).join('')}
       </div><div class="carr-totale"><span>Totale</span><b id="gg-tot">${esc(eur(0))}</b></div>
+      <p class="muted" id="gg-quadra"></p>
       <p class="alert err" hidden></p><div class="azioni"><button class="btn primary" type="submit">Registra</button></div></form></section>`;
   }
   function collegaGiornata(v) {
     const f = $('#gg', v), err = f.querySelector('.alert');
+    const ALIQ = [10, 22, 4, 5, 0];
+    // righe IVA: { al: aliquota, v: testo scritto }; si ridisegnano solo aggiungendo/togliendo (scrivendo no: il cursore resta)
+    const iva = [{ al: Number(S.imp.aliquota_default), v: '' }];
+    const disegnaIva = () => {
+      $('#gg-iva', f).innerHTML = iva.map((r, i) => `<div class="gg-iva-riga">
+        <label class="f"><span>Importo con IVA</span><div class="euro"><input data-ivi="${i}" inputmode="decimal" value="${esc(r.v)}" placeholder="resto"><span>€</span></div></label>
+        <label class="f"><span>Aliquota</span><select data-iva="${i}">${ALIQ.map((a) => `<option value="${a}"${r.al === a ? ' selected' : ''}>${a}%</option>`).join('')}</select></label>
+        ${iva.length > 1 ? `<button type="button" class="link neg" data-ivx="${i}" aria-label="Togli l'aliquota">✕</button>` : ''}</div>`).join('');
+      $$('[data-ivi]', f).forEach((el) => (el.oninput = () => { iva[el.dataset.ivi].v = el.value; }));
+      $$('[data-iva]', f).forEach((el) => (el.onchange = () => { iva[el.dataset.iva].al = Number(el.value); }));
+      $$('[data-ivx]', f).forEach((b) => (b.onclick = () => { iva.splice(Number(b.dataset.ivx), 1); disegnaIva(); aggiorna(); }));
+    };
+    $('#gg-iva-piu', f).onclick = () => { const libera = ALIQ.find((a) => !iva.some((r) => r.al === a)); iva.push({ al: libera ?? 22, v: '' }); disegnaIva(); };
     const leggiImporti = () => $$('[data-met]', f).map((i) => [i.dataset.met, cent(i.value)]).filter(([, c]) => c !== null);
-    f.oninput = () => { $('#gg-tot').textContent = eur(leggiImporti().reduce((a, [, c]) => a + (c > 0 ? c : 0), 0)); };
+    // divisione per IVA rispetto al totale dei pagamenti: { righe: [{aliquota, importo_cent}], errore }
+    const leggiIva = (tot) => {
+      const righe = iva.map((r) => ({ aliquota: r.al, importo_cent: cent(r.v) }));
+      if (righe.some((r) => Number.isNaN(r.importo_cent) || r.importo_cent < 0)) return { errore: 'Un importo delle righe IVA non è valido (es. 350,50)' };
+      const vuote = righe.filter((r) => r.importo_cent == null), scritte = righe.reduce((a, r) => a + (r.importo_cent || 0), 0);
+      if (vuote.length > 1) return { errore: 'Nelle righe IVA lascia vuota al massimo una riga (prende il resto)' };
+      if (vuote.length === 1) {
+        if (scritte > tot) return { errore: `Le righe IVA fanno già ${eur(scritte)}, più dei pagamenti (${eur(tot)})` };
+        vuote[0].importo_cent = tot - scritte;
+      } else if (scritte !== tot) return { errore: `Le righe IVA fanno ${eur(scritte)} ma i pagamenti fanno ${eur(tot)}: devono essere uguali` };
+      return { righe };
+    };
+    const aggiorna = () => {
+      const tot = leggiImporti().reduce((a, [, c]) => a + (c > 0 ? c : 0), 0);
+      $('#gg-tot').textContent = eur(tot);
+      const d = leggiIva(tot), q = $('#gg-quadra');
+      q.classList.toggle('neg', !!d.errore);
+      q.textContent = d.errore || (tot ? d.righe.filter((r) => r.importo_cent > 0).map((r) => `${eur(r.importo_cent)} al ${r.aliquota}% (IVA ${eur(Math.round(r.importo_cent - r.importo_cent / (1 + r.aliquota / 100)))})`).join(' · ') : '');
+    };
+    disegnaIva();
+    f.oninput = aggiorna; f.onchange = aggiorna;
     f.onsubmit = (e) => {
       e.preventDefault();
       occupato(f.querySelector('[type=submit]'), async () => {
@@ -214,6 +258,8 @@
         if (imp.some(([, c]) => Number.isNaN(c) || c < 0)) { err.textContent = 'Un importo non è valido (es. 350,50)'; err.hidden = false; return; }
         const veri = imp.filter(([, c]) => c > 0);
         if (!veri.length) { err.textContent = 'Inserisci almeno un importo'; err.hidden = false; return; }
+        const div = leggiIva(veri.reduce((a, [, c]) => a + c, 0));
+        if (div.errore) { err.textContent = div.errore; err.hidden = false; return; }
         const giorno = f.data ? f.data.value : oggi();
         if (!giorno) { err.textContent = 'Scegli il giorno'; err.hidden = false; return; }
         try {
@@ -221,8 +267,8 @@
           const gia = await get(`entrate?select=totale_cent&data=eq.${giorno}&descrizione=like.Totale di giornata*`).catch(() => []);
           if (gia.length && !(await conferma(`Per il ${dataIt(giorno)} hai già registrato un totale di giornata (${eur(gia.reduce((a, x) => a + x.totale_cent, 0))}). Registrarne un altro?`, 'Registra lo stesso', false))) return;
           // tutti i metodi insieme: o si salva tutto o niente (prima, un errore a metà lasciava solo una parte)
-          await rpc('registra_giornata', { p: { data: giorno, categoria_id: Number(f.cat.value) || null, aliquota_iva: Number(f.iva.value),
-            numero_documento: f.doc.value, importi: Object.fromEntries(veri) } });
+          await rpc('registra_giornata', { p: { data: giorno, categoria_id: Number(f.cat.value) || null, numero_documento: f.doc.value,
+            importi: Object.fromEntries(veri), iva: div.righe.filter((r) => r.importo_cent > 0) } });
           toast('Totale di giornata registrato', 'ok'); FG.vai('cassa/incassi');
         } catch (ex) { err.textContent = ex.message; err.hidden = false; }
       });
