@@ -49,9 +49,10 @@ services:
       JWT_SECRET: ${SERVICE_PASSWORD_64_JWT}
       ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
-      # 0 = con Tailscale Funnel (pubblico dal 28 ott 2026) CF-Connecting-IP si potrebbe falsificare: si usa l'indirizzo della
-      # connessione, quindi il limite dei tentativi di login è COMUNE a tutti (come Del Duca). Con un tunnel Cloudflare: "1".
-      TRUST_CF_HEADER: "0"
+      # 1 = pubblico con il tunnel Cloudflare (fiorista.plateslab.app): l'IP vero del visitatore è in CF-Connecting-IP,
+      # quindi il limite dei tentativi di login è per persona. ATTENZIONE: con Tailscale Funnel acceso sulla porta 8094
+      # l'intestazione si potrebbe falsificare: in quel caso rimettere "0" e togliere real_ip da nginx.conf.
+      TRUST_CF_HEADER: "1"
 
   web:
     build:
