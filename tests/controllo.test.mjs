@@ -204,6 +204,13 @@ try {
     await pausa(1500);
     assert.equal(await pg.$eval('#pf [name=da]', (e) => e.value), '2025-01-01');
   });
+  await prova('nuovo articolo senza costo né prezzo: si salva a 0 (prima errore «null value…» in inglese)', async () => {
+    await A.vai(pg, 'magazzino'); await pg.click('#a-nuovo'); await pg.fill('#modal [name=nome]', 'Articolo senza prezzi');
+    await pg.click('#modal [type=submit]');
+    for (let i = 0; i < 40 && !(await A.q("select 1 from prodotti where nome = 'Articolo senza prezzi'")).length; i++) await pausa(100);
+    const [p] = await A.q("select prezzo_acquisto_cent a, prezzo_vendita_cent v from prodotti where nome = 'Articolo senza prezzi'");
+    assert.deepEqual(p, { a: 0, v: 0 });
+  });
   await prova('categoria usata: il gestionale spiega perché non si cancella', async () => {
     await A.vai(pg, 'impostazioni/categorie');
     const id = (await A.q("select id from categorie where nome = 'Categoria usata'"))[0].id;

@@ -63,6 +63,7 @@ window.FG = (() => {
   const ERRORI = {
     '23505': 'Esiste già un elemento con lo stesso nome o codice',
     '23514': 'Un valore non è valido: controlla i campi',
+    '23502': 'Manca un valore obbligatorio: controlla i campi',
     '23503': 'Elemento usato altrove: non si può cancellare (puoi disattivarlo)',
     '42501': 'Non hai il permesso per questa operazione',
     '22P02': 'Un valore non è nel formato giusto',

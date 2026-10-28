@@ -89,6 +89,8 @@
         <button type="button" class="btn sm" data-mov="reso">Reso</button><button type="button" class="btn sm" data-mov="rettifica">Correggi giacenza</button></div>
         ${storico.length ? `<table class="mini"><tbody>${storico.map((m) => `<tr><td>${esc(dataIt(m.data))}</td><td>${esc(TIPI[m.tipo])}${m.motivo ? ` <small class="muted">${esc(m.motivo)}</small>` : ''}</td><td class="n ${m.quantita < 0 ? 'neg' : 'pos'}">${m.quantita > 0 ? '+' : ''}${esc(num(m.quantita))}</td></tr>`).join('')}</tbody></table>` : ''}` : ''}`;
     const d = FG.scheda({ titolo: p ? p.nome : 'Nuovo articolo', tabella: 'prodotti', fields, vals, extra, cancella: isOwner(),
+      // costo e prezzo lasciati vuoti = 0 (nel database non possono essere vuoti: prima il titolare riceveva un errore in inglese)
+      prima: (dati) => { if ('prezzo_acquisto_cent' in dati && dati.prezzo_acquisto_cent == null) dati.prezzo_acquisto_cent = 0; if (dati.prezzo_vendita_cent == null) dati.prezzo_vendita_cent = 0; return dati; },
       dopo: async (salvato) => {
         const ini = d.querySelector('[name=iniziale]');
         if (!p && salvato && ini && qty(ini.value) > 0) await rpc('imposta_giacenza', { p_prodotto: salvato.id, p_contati: qty(ini.value), p_motivo: 'Giacenza iniziale' });
