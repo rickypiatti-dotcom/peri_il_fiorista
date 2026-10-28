@@ -2,7 +2,7 @@
    Questi incassi NON entrano in cruscotto, statistiche, elenco incassi e chiusura di cassa: si vedono solo qui. Solo titolare. */
 'use strict';
 (() => {
-  const { $, $$, esc, eur, eur0, perc, oggi, iso, dataIt, get, S, isOwner, VIEWS, render, csv, eurCsv, stampa, meseIt, cap, vuoto, pallino } = FG;
+  const { $, $$, esc, eur, eur0, perc, oggi, iso, dataIt, get, getTutti, righeVisibili, notaRighe, S, isOwner, VIEWS, render, csv, eurCsv, stampa, meseIt, cap, vuoto, pallino } = FG;
   const P = { da: null, a: null, chiave: 'mese' };
   const GIORNI = ['', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
   const PERIODI = [['oggi', 'Oggi'], ['mese', 'Questo mese'], ['scorso', 'Mese scorso'], ['anno', 'Quest\'anno'], ['annoscorso', 'Anno scorso'], ['dodici', 'Ultimi 12 mesi']];
@@ -20,8 +20,8 @@
     if (!isOwner()) return `<header class="testa"><h1>🌸 Altro</h1></header>${vuoto('La contabilità «altro» la vede solo il titolare.')}`;
     if (!P.da) [P.da, P.a] = periodo(P.chiave);
     const [righe, prima, oggiR] = await Promise.all([
-      get(`entrate_vista?${SEL}&data=gte.${P.da}&data=lte.${P.a}&order=data.desc,id.desc&limit=5000`),
-      get(`entrate?${SEL}&select=totale_cent&data=gte.${annoPrima(P.da)}&data=lte.${annoPrima(P.a)}`),
+      getTutti(`entrate_vista?${SEL}&data=gte.${P.da}&data=lte.${P.a}&order=data.desc,id.desc`),
+      getTutti(`entrate?${SEL}&select=totale_cent&data=gte.${annoPrima(P.da)}&data=lte.${annoPrima(P.a)}&order=id`),
       get(`entrate?${SEL}&select=totale_cent&data=eq.${oggi()}`),
     ]);
     VIEWS.altro.righe = righe;
@@ -48,7 +48,7 @@
       <div class="azioni"><button class="btn" type="button" id="al-csv"${righe.length ? '' : ' disabled'}>⬇ Scarica CSV</button><button class="btn" type="button" id="al-stampa">🖨 Stampa</button></div></header>
       <form class="filtri" id="al-f">
         <div class="rapidi">${PERIODI.map(([k, t]) => `<button type="button" class="chip${P.chiave === k ? ' on' : ''}" data-k="${k}">${t}</button>`).join('')}</div>
-        <label class="f"><span>Dal</span><input type="date" name="da" value="${P.da}"></label><label class="f"><span>Al</span><input type="date" name="a" value="${P.a}"></label></form>
+        <label class="f"><span>Dal</span><input type="date" name="da" value="${P.da}"></label><label class="f"><span>Al</span><input type="date" name="a" value="${P.a}"></label>${FG.cercaDate}</form>
       <div id="al-corpo">
       <p class="muted">Dal ${esc(dataIt(P.da))} al ${esc(dataIt(P.a))} (${giorni} giorni). Importi IVA compresa dove non indicato.</p>
       <section class="kpi">
@@ -67,8 +67,8 @@
           ${FG.barre(perTipo.map((x) => ({ nome: x.nome, valore: x.valore, colore: x.colore, nota: tr(x.n) })))}</section>
         <section class="card"><h2>Per giorno della settimana</h2>${FG.barre(perGiorno.map((x) => ({ nome: x.nome, valore: x.valore, colore: x.colore, nota: tr(x.n) })))}</section>
       </div>
-      <section class="card"><h2>Tutte le transazioni</h2><div class="tabella"><table><thead><tr><th>Data</th><th>Cosa</th><th>Tipo</th><th>Documento</th><th class="n">Importo</th></tr></thead><tbody>
-        ${righe.map((r) => `<tr data-id="${r.id}" tabindex="0"><td>${esc(dataIt(r.data))}<br><small class="muted">${esc(new Date(r.creato_il).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }))}</small></td>
+      <section class="card"><h2>Tutte le transazioni</h2>${notaRighe(righe)}<div class="tabella"><table><thead><tr><th>Data</th><th>Cosa</th><th>Tipo</th><th>Documento</th><th class="n">Importo</th></tr></thead><tbody>
+        ${righeVisibili(righe).map((r) => `<tr data-id="${r.id}" tabindex="0"><td>${esc(dataIt(r.data))}<br><small class="muted">${esc(new Date(r.creato_il).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }))}</small></td>
           <td>${esc(r.articoli || r.descrizione || '—')}${r.cliente ? `<br><small class="muted">${esc(r.cliente)}</small>` : ''}${r.ordine_numero ? `<br><small class="muted">ordine ${esc(r.ordine_numero)}</small>` : ''}${r.nota ? `<br><small class="muted">${esc(r.nota)}</small>` : ''}</td>
           <td>${pallino(r.categoria_colore)}${esc(r.categoria || '—')}</td><td>${esc(r.documento)}${r.numero_documento ? `<br><small class="muted">${esc(r.numero_documento)}</small>` : ''}</td>
           <td class="n"><b>${esc(eur(r.totale_cent))}</b>${r.sconto_cent ? `<br><small class="muted">sconto ${esc(eur(r.sconto_cent))}</small>` : ''}</td></tr>`).join('')}

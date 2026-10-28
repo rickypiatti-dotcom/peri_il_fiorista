@@ -51,7 +51,7 @@
 
     const ora = new Date().getHours();
     const saluto = ora < 13 ? 'Buongiorno' : ora < 18 ? 'Buon pomeriggio' : 'Buonasera';
-    const metodi = isOwner() && Object.entries(c.oggi_metodi || {}).map(([m, v]) => `${esc(m)} ${esc(eur(v))}`).join(' · ');
+    const metodi = isOwner() && Object.entries(c.oggi_metodi || {}).map(([m, v]) => `${m} ${eur(v)}`).join(' · ');
     let h = `<header class="testa"><div><h1>${saluto}</h1><p class="muted">${esc(giorno(t).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</p></div>
       ${modulo('cassa') ? '<a class="btn primary" href="#/cassa">+ Nuova vendita</a>' : ''}</header>`;
 
@@ -102,7 +102,7 @@
   };
 
   function kpi(titolo, valore, nota = '', cls = '') {
-    return `<div class="kpi-box ${cls}"><span>${esc(titolo)}</span><b>${esc(valore)}</b>${nota ? `<small>${nota.includes('<') ? nota : esc(nota)}</small>` : ''}</div>`;
+    return `<div class="kpi-box ${cls}"><span>${esc(titolo)}</span><b>${esc(valore)}</b>${nota ? `<small>${esc(nota)}</small>` : ''}</div>`;
   }
 
   // Quanto serve incassare per coprire le spese, e dove si arriva a fine mese a questo ritmo

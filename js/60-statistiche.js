@@ -2,7 +2,7 @@
    più venduti, perdite (scarti), fornitori, magazzino, giorni della settimana, IVA indicativa, confronto con l'anno prima. */
 'use strict';
 (() => {
-  const { $, $$, esc, eur, eur0, num, perc, oggi, iso, dataIt, get, rpc, S, VIEWS, render, csv, eurCsv, numCsv, stampa, meseIt, cap } = FG;
+  const { $, $$, esc, eur, eur0, num, perc, oggi, iso, dataIt, get, getTutti, rpc, S, VIEWS, render, csv, eurCsv, numCsv, stampa, meseIt, cap } = FG;
   const P = { da: null, a: null, chiave: 'anno' };
   const GIORNI = ['', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
   function periodo(k) {
@@ -29,7 +29,7 @@
     return `<header class="testa"><h1>Statistiche</h1><div class="azioni"><button class="btn" type="button" id="st-csv">⬇ Dati per il commercialista</button><button class="btn" type="button" id="st-stampa">🖨 Stampa</button></div></header>
       <form class="filtri" id="pf">
         <div class="rapidi">${[['mese', 'Questo mese'], ['scorso', 'Mese scorso'], ['trimestre', 'Trimestre'], ['anno', 'Quest\'anno'], ['annoscorso', 'Anno scorso'], ['dodici', 'Ultimi 12 mesi']].map(([k, t]) => `<button type="button" class="chip${P.chiave === k ? ' on' : ''}" data-k="${k}">${t}</button>`).join('')}</div>
-        <label class="f"><span>Dal</span><input type="date" name="da" value="${P.da}"></label><label class="f"><span>Al</span><input type="date" name="a" value="${P.a}"></label></form>
+        <label class="f"><span>Dal</span><input type="date" name="da" value="${P.da}"></label><label class="f"><span>Al</span><input type="date" name="a" value="${P.a}"></label>${FG.cercaDate}</form>
       <div id="st-corpo">
       <p class="muted">Dal ${esc(dataIt(s.da))} al ${esc(dataIt(s.a))} (${T.giorni} giorni). Importi IVA compresa dove non indicato.</p>
       <section class="kpi">
@@ -98,13 +98,17 @@
     $$('[data-k]', f).forEach((b) => (b.onclick = () => { P.chiave = b.dataset.k; [P.da, P.a] = periodo(P.chiave); render(); }));
     f.onchange = () => { if (f.da.value && f.a.value) { P.chiave = ''; P.da = f.da.value; P.a = f.a.value; render(); } };
     $('#st-stampa', v).onclick = () => stampa($('#st-corpo', v).innerHTML, `${S.imp.nome_attivita} · statistiche dal ${dataIt(P.da)} al ${dataIt(P.a)}`);
-    $('#st-csv', v).onclick = async () => {
-      const [ent, spe] = await Promise.all([get(`entrate_vista?data=gte.${P.da}&data=lte.${P.a}&metodo=not.ilike.altro&order=data,id`), get(`spese_vista?data=gte.${P.da}&data=lte.${P.a}&order=data,id`)]);
+    const bc = $('#st-csv', v);
+    bc.onclick = () => FG.occupato(bc, async () => {
+      // tutte le righe (a pagine): un anno può superare le 5000 righe che il server dà in una volta
+      let ent, spe;
+      try { [ent, spe] = await Promise.all([getTutti(`entrate_vista?data=gte.${P.da}&data=lte.${P.a}&metodo=not.ilike.altro&order=data,id`), getTutti(`spese_vista?data=gte.${P.da}&data=lte.${P.a}&order=data,id`)]); }
+      catch (ex) { return FG.toast(ex.message, 'err'); }
       csv(`incassi_${P.da}_${P.a}`, ['Data', 'Descrizione', 'Tipo', 'Cliente', 'Metodo', 'Documento', 'Numero', 'Totale', 'IVA', 'Imponibile'],
         ent.map((r) => [r.data, r.articoli || r.descrizione || '', r.categoria || '', r.cliente || '', r.metodo, r.documento, r.numero_documento || '', eurCsv(r.totale_cent), eurCsv(r.iva_cent), eurCsv(r.totale_cent - r.iva_cent)]));
       setTimeout(() => csv(`spese_${P.da}_${P.a}`, ['Data', 'Descrizione', 'Categoria', 'Fornitore', 'Numero documento', 'Totale', 'IVA', 'Imponibile', 'Pagamento', 'Pagata', 'Allegati'],
         spe.map((s) => [s.data, s.descrizione, s.categoria || '', s.fornitore || '', s.numero_documento || '', eurCsv(s.importo_cent), eurCsv(s.iva_cent), eurCsv(s.importo_cent - s.iva_cent), s.metodo, s.pagata ? 'sì' : 'no', s.allegati])), 600);
       FG.toast('Scaricati due file: incassi e spese (si aprono con Excel)');
-    };
+    });
   };
 })();

@@ -40,7 +40,9 @@
       FG.modulo('ricette') ? get('ricette?attiva=is.true&select=id,nome,prezzo_vendita_cent&order=nome') : [],
       o ? get('ordine_righe?ordine_id=eq.' + o.id + '&order=ordine,id') : [],
     ]);
-    const prev = o ? o.stato === 'preventivo' : preventivo;
+    // anche un preventivo RIFIUTATO resta un preventivo: prima, modificandolo, il campo Stato proponeva «Da fare» e diventava un ordine
+    const prev = o ? ['preventivo', 'rifiutato'].includes(o.stato) : preventivo;
+    let clienteCreato = null; // se il salvataggio fallisce dopo aver creato il cliente nuovo, riprovando non se ne crea un secondo
     const voci = righe.length ? righe.map((r) => ({ d: r.descrizione, q: r.quantita, p: r.prezzo_unit_cent, ricetta_id: r.ricetta_id })) : [{ d: '', q: 1, p: null }];
     const val = o || { data_consegna: addGiorni(oggi(), prev ? 30 : 1), consegna: 'ritiro', stato: prev ? 'preventivo' : 'da_fare', valido_fino: prev ? addGiorni(oggi(), 30) : null, condizioni: prev ? S.imp.condizioni_preventivo : null };
     const d = apri(`<h2>${o ? (prev ? 'Preventivo ' : 'Ordine ') + esc(o.numero) : prev ? 'Nuovo preventivo' : 'Nuovo ordine'}</h2><form novalidate id="om">
@@ -105,16 +107,18 @@
           const buone = voci.filter((v) => v.d.trim() || v.p);
           for (const v of buone) {
             if (!v.d.trim()) throw new Error('Ogni voce ha bisogno di una descrizione');
-            if (!(v.q > 0)) throw new Error(`«${v.d}»: quantità non valida`);
-            if (v.p == null || Number.isNaN(v.p) || v.p < 0) throw new Error(`«${v.d}»: prezzo non valido`);
+            if (!(v.q > 0 && v.q <= 100000)) throw new Error(`«${v.d}»: quantità non valida`);
+            if (v.p == null || Number.isNaN(v.p) || v.p < 0 || v.p > 100000000) throw new Error(`«${v.d}»: prezzo non valido`);
           }
+          if (buone.reduce((a, v) => a + Math.round(v.q * v.p), 0) > 100000000) throw new Error('Totale troppo alto');
           if (!f.descrizione.value.trim()) throw new Error('Scrivi una descrizione del lavoro');
           if (!f.data_consegna.value) throw new Error('Manca la data');
           let cliente = f.cliente_id.value === 'nuovo' ? null : Number(f.cliente_id.value) || null;
-          if (f.cliente_id.value === 'nuovo') {
+          if (f.cliente_id.value === 'nuovo' && clienteCreato) cliente = clienteCreato;
+          else if (f.cliente_id.value === 'nuovo') {
             if (f.nc_nome.value.trim().length < 2) throw new Error('Scrivi il nome del nuovo cliente');
             const [c] = await rest('POST', 'clienti', { nome: f.nc_nome.value.trim(), telefono: f.nc_tel.value.trim() || null, indirizzo: f.consegna.value !== 'ritiro' ? f.indirizzo.value.trim() || null : null });
-            cliente = c.id;
+            cliente = clienteCreato = c.id;
           }
           const ritiro = f.consegna.value === 'ritiro';
           const dati = {
@@ -126,9 +130,10 @@
           if (prev) { dati.valido_fino = f.valido_fino.value || null; dati.condizioni = f.condizioni.value.trim() || null; if (!o) dati.stato = 'preventivo'; }
           else dati.stato = f.stato.value;
           const [salvato] = o ? await rest('PATCH', 'ordini?id=eq.' + o.id, dati) : await rest('POST', 'ordini', dati);
-          // voci: si riscrivono tutte (il totale lo ricalcola il database)
-          if (o) await rest('DELETE', 'ordine_righe?ordine_id=eq.' + o.id);
+          // voci: prima si scrivono le nuove, POI si tolgono le vecchie (per numero). Se la scrittura fallisce le voci di prima restano
+          // (prima si cancellavano subito: un errore lasciava l'ordine senza voci e con totale 0). Il totale lo ricalcola il database.
           if (buone.length) await rest('POST', 'ordine_righe', buone.map((v, i) => ({ ordine_id: salvato.id, descrizione: v.d.trim(), quantita: v.q, prezzo_unit_cent: v.p, ricetta_id: v.ricetta_id || null, ordine: i })), 'return=minimal');
+          if (o && righe.length) await rest('DELETE', `ordine_righe?ordine_id=eq.${o.id}&id=in.(${righe.map((r) => r.id).join(',')})`);
           chiudi(); toast(prev ? 'Preventivo salvato' : 'Ordine salvato', 'ok'); vai('ordini/' + salvato.id);
         } catch (ex) { err.textContent = ex.message; err.hidden = false; }
       });
@@ -146,9 +151,9 @@
     let cliente = null;
     if (o.cliente_id) [cliente] = await get('clienti?id=eq.' + o.cliente_id);
     corrente = { o, righe, cliente };
-    const prev = o.stato === 'preventivo', res = residuo(o);
+    const prev = ['preventivo', 'rifiutato'].includes(o.stato), res = residuo(o);
     return `<header class="testa"><div><a class="link" href="#/ordini${prev ? '/preventivi' : ''}">← ${prev ? 'Preventivi' : 'Ordini'}</a><h1>${prev ? 'Preventivo' : 'Ordine'} ${esc(o.numero)} ${pill(STATI[o.stato], o.stato)}</h1></div>
-      <div class="azioni">${prev ? '<button class="btn primary" data-a="accetta">✓ Accettato: diventa ordine</button><button class="btn" data-a="rifiuta">Rifiutato</button><button class="btn" data-a="stampa">🖨 Stampa / PDF</button>'
+      <div class="azioni">${prev ? `<button class="btn primary" data-a="accetta">✓ Accettato: diventa ordine</button>${o.stato === 'preventivo' ? '<button class="btn" data-a="rifiuta">Rifiutato</button>' : ''}<button class="btn" data-a="stampa">🖨 Stampa / PDF</button>`
         : `${PROSSIMO[o.stato] ? `<button class="btn primary" data-a="avanza">Segna «${STATI[PROSSIMO[o.stato]]}»</button>` : ''}${res && o.stato !== 'annullato' && FG.modulo('cassa') ? '<button class="btn" data-a="incassa">💶 Incassa</button>' : ''}<button class="btn" data-a="biglietto"${o.biglietto ? '' : ' hidden'}>🖨 Bigliettino</button>`}
         <button class="btn" data-a="modifica">Modifica</button><button class="btn" data-a="duplica">Duplica</button></div></header>
       <div class="colonne2"><section class="card"><h2>${esc(o.descrizione)}</h2>
@@ -182,7 +187,7 @@
         if (a === 'annulla') { if (await conferma('Annullare l\'ordine? Gli incassi già registrati restano (eventuali rimborsi vanno annullati in Cassa).', 'Annulla ordine')) { await rest('PATCH', 'ordini?id=eq.' + o.id, { stato: 'annullato' }); render(); } return; }
         if (a === 'duplica') {
           const { id, numero, cliente, cliente_telefono, categoria, incassato_cent, totale_cent, creato_il, aggiornato_il, creato_da_preventivo, ...copia } = o;
-          const [n] = await rest('POST', 'ordini', { ...copia, stato: o.stato === 'preventivo' ? 'preventivo' : 'da_fare', data_consegna: addGiorni(oggi(), 1) });
+          const [n] = await rest('POST', 'ordini', { ...copia, stato: ['preventivo', 'rifiutato'].includes(o.stato) ? 'preventivo' : 'da_fare', data_consegna: addGiorni(oggi(), 1) });
           if (righe.length) await rest('POST', 'ordine_righe', righe.map(({ id: _, ordine_id: __, ...r }) => ({ ...r, ordine_id: n.id })), 'return=minimal');
           toast('Copia creata: controlla la data'); return vai('ordini/' + n.id);
         }
@@ -245,7 +250,7 @@
     const riga = (o) => `<li><a href="#/ordini/${o.id}"><b>${o.ora_consegna ? esc(o.ora_consegna.slice(0, 5)) : '—'}</b> ${esc(o.descrizione.slice(0, 100))}</a> ${pill(STATI[o.stato], o.stato)}
       <br><small class="muted">${esc(o.destinatario || o.cliente || '')}${o.indirizzo ? ' · ' + esc(o.indirizzo) : ''}${residuo(o) ? ` · <span class="neg">da incassare ${esc(eur(residuo(o)))}</span>` : ''}</small></li>`;
     return `<header class="testa"><h1>Ordini</h1></header>${tabs('consegne')}
-      <div class="filtri"><label class="f"><span>Giorno</span><input type="date" id="gc-data" value="${data}"></label>
+      <div class="filtri"><label class="f"><span>Giorno</span><input type="date" id="gc-data" value="${data}"></label>${FG.cercaDate}
         <div class="rapidi"><button class="chip" type="button" data-g="${oggi()}">Oggi</button><button class="chip" type="button" data-g="${addGiorni(oggi(), 1)}">Domani</button></div>
         <button class="btn sm" type="button" id="gc-stampa"${lista.length ? '' : ' disabled'}>🖨 Stampa giro</button>
         <button class="btn sm" type="button" id="gc-biglietti"${lista.some((o) => o.biglietto) ? '' : ' disabled'}>🖨 Bigliettini</button></div>

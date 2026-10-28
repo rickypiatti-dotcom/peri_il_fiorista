@@ -90,6 +90,19 @@ window.FG = (() => {
     return j;
   }
   const get = (path) => rest('GET', path);
+  // Tutte le righe, a pagine: il server ne dà al massimo 5000 per richiesta (PGRST_DB_MAX_ROWS) e le altre sparirebbero
+  // in silenzio da totali e CSV (es. incassi di un anno intero). path senza limit/offset; serve un "order" stabile.
+  async function getTutti(path) {
+    const out = [], passo = 5000;
+    for (let da = 0; ; da += passo) {
+      const r = await get(`${path}${path.includes('?') ? '&' : '?'}limit=${passo}&offset=${da}`);
+      out.push(...r); if (r.length < passo) return out;
+    }
+  }
+  // Tabelle lunghe: si disegnano al massimo MAX_RIGHE righe (il telefono resta veloce); totali e CSV usano tutto.
+  const MAX_RIGHE = 1000;
+  const righeVisibili = (lista) => lista.slice(0, MAX_RIGHE);
+  const notaRighe = (lista) => (lista.length > MAX_RIGHE ? `<p class="muted"><small>Qui sotto le prime ${MAX_RIGHE} righe di ${lista.length}: totali e CSV le contano tutte. Restringi le date per vederle tutte.</small></p>` : '');
   const rpc = (fn, args) => rest('POST', 'rpc/' + fn, args || {});
   async function api(method, path, body, raw) {
     const headers = { Authorization: 'Bearer ' + S.token };
@@ -198,6 +211,7 @@ window.FG = (() => {
     rerenderTimer = setTimeout(() => {
       const a = document.activeElement;
       if (!$('#modal').hidden || (a && a.closest('#view') && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) return;
+      if ($('#view .cerca-date.primary')) return; // date cambiate ma non ancora cercate: non si buttano via
       render(true);
     }, 500);
   }
@@ -221,53 +235,63 @@ window.FG = (() => {
   document.addEventListener('click', riseleziona, true);
   document.addEventListener('keydown', (e) => { if (e.target instanceof HTMLInputElement) e.target._selezionaAlClic = false; }, true);
 
-  // ------------------------------------------------------------ date dei filtri: si aggiornano a data FINITA, non a ogni cifra
-  // Con una data già piena il browser manda «change» a ogni cifra scritta (giorno «2» = data valida) e la pagina si ridisegnava
-  // prima di poter scrivere il mese. Qui il «change» si trattiene: scelta dal calendario = subito; scrivendo a mano = dopo una pausa,
-  // con Invio o uscendo dal campo; anni a meno di 4 cifre (0002, 0020...) ignorati.
-  const DATA_FILTRO = '.filtri input[type=date], input[type=date].filtro', PAUSA_DATA = 1500;
+  // ------------------------------------------------------------ date dei filtri: si cerca SOLO col pulsante «Cerca» (o Invio)
+  // Con una data già piena il browser manda «change» a ogni cifra scritta e la pagina si ridisegnava prima di poter scrivere il mese
+  // (28 ott). Richiesta di Riccardo: le date si cambiano con calma e la ricerca parte col pulsante accanto (`FG.cercaDate`).
+  // Il «change» delle date dentro `.filtri` è trattenuto; «Cerca» lo rimanda al gestore della pagina, che rilegge tutti i campi.
+  const DATA_FILTRO = '.filtri input[type=date]';
+  const cercaDate = '<button type="button" class="btn cerca-date">🔍 Cerca</button>';
   const dataFinita = (v) => /^(19|20)\d\d-\d\d-\d\d$/.test(v);
-  const confermaData = (el) => {
-    clearTimeout(el._attesa); el._attesa = 0;
-    if (el._ultima === undefined) el._ultima = el.defaultValue;
-    if (!el.isConnected || !dataFinita(el.value) || el.value === el._ultima) return;
-    el._ultima = el.value; el._passa = true;
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-    el._passa = false;
+  const segnaDaCercare = (box) => {
+    const b = box && box.querySelector('.cerca-date'); if (!b) return;
+    b.classList.toggle('primary', [...box.querySelectorAll('input[type=date]')].some((i) => i.value !== i.defaultValue));
   };
-  document.addEventListener('keydown', (e) => {
-    const el = e.target;
-    if (!(el instanceof HTMLInputElement) || !el.matches(DATA_FILTRO)) return;
-    el._tasto = Date.now();
-    if (e.key === 'Enter') { e.preventDefault(); confermaData(el); }
-    else if (el._attesa) { clearTimeout(el._attesa); el._attesa = setTimeout(() => confermaData(el), PAUSA_DATA); }
-  }, true);
+  function cercaConDate(box) {
+    const date = [...box.querySelectorAll('input[type=date]')];
+    const rotta = date.find((i) => !dataFinita(i.value));
+    if (rotta) { toast('Scrivi la data completa: giorno, mese e anno (4 cifre).', 'err'); rotta.focus(); return; }
+    const da = date.find((i) => i.name === 'da'), a = date.find((i) => i.name === 'a');
+    if (da && a && a.value < da.value) [da.value, a.value] = [a.value, da.value];
+    const el = date[0]; el._passa = true;
+    try { el.dispatchEvent(new Event('change', { bubbles: true })); } finally { el._passa = false; }
+  }
   document.addEventListener('change', (e) => {
     const el = e.target;
     if (!(el instanceof HTMLInputElement) || !el.matches(DATA_FILTRO) || el._passa) return;
     e.stopImmediatePropagation();
-    clearTimeout(el._attesa);
-    if (Date.now() - (el._tasto || 0) < 500) el._attesa = setTimeout(() => confermaData(el), PAUSA_DATA);
-    else confermaData(el);
+    segnaDaCercare(el.closest('.filtri'));
   }, true);
-  document.addEventListener('focusout', (e) => { const el = e.target; if (el instanceof HTMLInputElement && el._attesa) confermaData(el); }, true);
+  document.addEventListener('input', (e) => { const el = e.target; if (el instanceof HTMLInputElement && el.matches(DATA_FILTRO)) segnaDaCercare(el.closest('.filtri')); }, true);
+  document.addEventListener('keydown', (e) => {
+    const el = e.target;
+    if (e.key !== 'Enter' || !(el instanceof HTMLInputElement) || !el.matches(DATA_FILTRO)) return;
+    e.preventDefault(); cercaConDate(el.closest('.filtri'));
+  }, true);
+  document.addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('.cerca-date'); if (b) cercaConDate(b.closest('.filtri')); });
 
   // ------------------------------------------------------------ finestre
   function apri(html, cls = '') {
+    if (rispostaConferma) { const r = rispostaConferma; rispostaConferma = null; r(false); }
     const m = $('#modal');
     m.innerHTML = `<div class="dialog ${cls}" role="dialog" aria-modal="true"><button class="x" type="button" aria-label="Chiudi">×</button>${html}</div>`;
     m.hidden = false; m.scrollTop = 0; document.body.classList.add('no-scroll');
     const f = m.querySelector('input:not([type=hidden]):not([type=checkbox]),select,textarea'); if (f && matchMedia('(pointer:fine)').matches) f.focus();
     return m.firstElementChild;
   }
-  function chiudi() { const m = $('#modal'); m.hidden = true; m.innerHTML = ''; document.body.classList.remove('no-scroll'); }
+  // una conferma chiusa con ×, Esc o tocco fuori vale «no» (prima restava in sospeso e il pulsante che l'aveva aperta restava su «Attendi…»)
+  let rispostaConferma = null;
+  function chiudi() {
+    const m = $('#modal'); m.hidden = true; m.innerHTML = ''; document.body.classList.remove('no-scroll');
+    if (rispostaConferma) { const r = rispostaConferma; rispostaConferma = null; r(false); }
+  }
   $('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal' || e.target.closest('.x')) chiudi(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#modal').hidden) chiudi(); });
   function conferma(testo, si = 'Conferma', pericolo = true) {
     return new Promise((ok) => {
       const d = apri(`<h2>Sei sicuro?</h2><p>${esc(testo)}</p><div class="azioni"><button class="btn" data-no type="button">Annulla</button><button class="btn ${pericolo ? 'danger' : 'primary'}" data-si type="button">${esc(si)}</button></div>`, 'piccolo');
-      d.querySelector('[data-si]').onclick = () => { chiudi(); ok(true); };
-      d.querySelector('[data-no]').onclick = () => { chiudi(); ok(false); };
+      rispostaConferma = ok;
+      d.querySelector('[data-si]').onclick = () => { rispostaConferma = null; chiudi(); ok(true); };
+      d.querySelector('[data-no]').onclick = () => chiudi();
     });
   }
   // un pulsante che salva: niente doppio tocco, errore mostrato nella finestra
@@ -350,11 +374,14 @@ window.FG = (() => {
   const numCsv = (q) => (q == null ? '' : String(q).replace('.', ','));
 
   // stampa di un pezzo di pagina (giro consegne, bigliettini, lista di riordino, statistiche)
+  // Il riquadro resta nella pagina finché il browser non dice di aver stampato (a schermo è nascosto): su iPad e telefono
+  // window.print() non aspetta, e toglierlo dopo 2 secondi poteva far stampare la pagina sbagliata. Si toglie alla stampa dopo.
   function stampa(html, titolo = 'Stampa') {
+    const vecchio = $('#stampa'); if (vecchio) vecchio.remove();
     const box = document.createElement('div'); box.id = 'stampa'; box.innerHTML = `<h1>${esc(titolo)}</h1>${html}`;
     document.body.appendChild(box); document.body.classList.add('stampando');
     const fine = () => { document.body.classList.remove('stampando'); box.remove(); window.removeEventListener('afterprint', fine); };
-    window.addEventListener('afterprint', fine); window.print(); setTimeout(fine, 2000);
+    window.addEventListener('afterprint', fine); window.print();
   }
   async function copia(testo) {
     try { await navigator.clipboard.writeText(testo); toast('Copiato: ora puoi incollarlo (WhatsApp, email...)'); }
@@ -386,7 +413,8 @@ window.FG = (() => {
   function segnaMenu() { $$('#nav a').forEach((a) => a.classList.toggle('on', a.dataset.r === S.route)); }
   function vai(r) { if (location.hash === '#/' + r) render(); else location.hash = '#/' + r; }
   function leggiRotta() {
-    const parti = decodeURIComponent(location.hash.replace(/^#\/?/, '')).split('/').filter(Boolean);
+    let h = location.hash.replace(/^#\/?/, ''); try { h = decodeURIComponent(h); } catch { /* indirizzo storpiato: si usa com'è */ }
+    const parti = h.split('/').filter(Boolean);
     S.route = VIEWS[parti[0]] ? parti[0] : 'cruscotto'; S.args = parti.slice(1);
   }
   let renderN = 0;
@@ -418,7 +446,7 @@ window.FG = (() => {
 
   return {
     $, $$, esc, pad, eur, eur0, euroInput, num, perc, cent, qty, iso, oggi, giorno, addGiorni, dataIt, dataBreve, quando, MESI, MESI_LUNGHI, meseIt, giorniTra, cap,
-    S, isOwner, separato, toast, rest, get, rpc, api, apriAllegato, caricaAllegato, login, setSession, sessioneSalvata, logout,
+    S, isOwner, separato, cercaDate, toast, rest, get, getTutti, righeVisibili, notaRighe, rpc, api, apriAllegato, caricaAllegato, login, setSession, sessioneSalvata, logout,
     caricaComuni, catDi, catNome, modulo, applicaAspetto, apriStream, ascoltatori, aggiornaVista,
     apri, chiudi, conferma, occupato, campo, campi, leggi, scheda, csv, eurCsv, numCsv, stampa, copia,
     VIEWS, costruisciMenu, vai, render, schede, vuoto, pill, pallino,

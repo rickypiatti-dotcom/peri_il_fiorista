@@ -148,7 +148,7 @@
       { k: 'giorno', l: 'Giorno', t: 'int', w: 3 }, { k: 'mese', l: 'Mese', t: 'select', num: true, o: MESI_LUNGHI.map((m, i) => [i + 1, m]), w: 3 },
       { k: 'scarto', l: 'Giorni prima (−) o dopo (+)', t: 'int', w: 3, help: 'per le feste legate alla Pasqua' }, { k: 'preavviso', l: 'Avvisa quanti giorni prima', t: 'int', req: true, w: 3 },
       { k: 'nota', l: 'Promemoria (cosa ordinare)', t: 'textarea', rows: 2 }, { k: 'attivo', l: 'Attiva', t: 'bool' }];
-    const prima = (d) => { d.scarto = d.scarto || 0; if (d.regola === 'fissa' && !(d.giorno >= 1 && d.giorno <= 31 && d.mese)) throw new Error('Indica giorno e mese'); if (d.regola !== 'fissa') { d.giorno = d.giorno || null; } return d; };
+    const prima = (d) => { d.scarto = d.scarto || 0; if (d.regola === 'fissa' && !(d.mese && d.giorno >= 1 && d.giorno <= new Date(2024, d.mese, 0).getDate())) throw new Error('Indica giorno e mese (un giorno che esiste in quel mese)'); if (d.regola !== 'fissa') { d.giorno = d.giorno || null; } return d; };
     $('#fe-nuova', v).onclick = () => FG.scheda({ titolo: 'Nuova festa', tabella: 'calendario', fields: campiF, vals: { regola: 'fissa', preavviso: 21, attivo: true, scarto: 0 }, prima });
     $$('tr[data-id]', v).forEach((tr) => (tr.onclick = () => FG.scheda({ titolo: 'Festa', tabella: 'calendario', fields: campiF, vals: VIEWS.impostazioni.feste.find((f) => f.id === Number(tr.dataset.id)), prima })));
   }
@@ -208,7 +208,7 @@
     VIEWS.impostazioni.reg = lista;
     const titolo = (r) => { const x = r.dopo || r.prima || {}; return x.nome || x.descrizione || x.numero || x.nome_attivita || (x.totale_cent != null ? eur(x.totale_cent) : '') || (x.quantita != null ? num(x.quantita) : '') || ''; };
     return `<header class="testa"><h1>Impostazioni</h1></header>${tabs('registro')}
-      <form class="filtri" id="rf"><label class="f"><span>Dal</span><input type="date" name="da" value="${R.da}"></label>
+      <form class="filtri" id="rf"><label class="f"><span>Dal</span><input type="date" name="da" value="${R.da}"></label>${FG.cercaDate}
         <label class="f"><span>Cosa</span><select name="tabella"><option value="">Tutto</option>${Object.entries(NOMI_T).map(([k, t]) => `<option value="${k}"${k === R.tabella ? ' selected' : ''}>${t}</option>`).join('')}</select></label></form>
       ${lista.length ? `<div class="tabella"><table><thead><tr><th>Quando</th><th>Chi</th><th>Cosa</th></tr></thead><tbody>${lista.map((r) => `<tr data-id="${r.id}" tabindex="0"><td>${esc(quando(r.quando))}</td><td>${esc(r.email || 'sistema')}</td>
         <td>${esc(NOMI_T[r.tabella] || r.tabella)} <b>${esc(AZ[r.azione] || r.azione)}</b> <small class="muted">${esc(String(titolo(r)).slice(0, 80))}</small></td></tr>`).join('')}</tbody></table></div>` : vuoto('Nessuna modifica nel periodo.')}`;

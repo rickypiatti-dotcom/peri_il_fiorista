@@ -2,7 +2,7 @@
    Arrivi e bolle: ogni arrivo di merce è una bolla con numero, data e foto; la fattura del fornitore può raggruppare più bolle. */
 'use strict';
 (() => {
-  const { $, $$, esc, eur, num, perc, cent, qty, oggi, dataIt, dataBreve, quando, addGiorni, get, rpc, rest, S, isOwner, toast, apri, chiudi, conferma, occupato,
+  const { $, $$, esc, eur, num, perc, cent, qty, oggi, dataIt, dataBreve, quando, addGiorni, get, getTutti, righeVisibili, notaRighe, rpc, rest, S, isOwner, toast, apri, chiudi, conferma, occupato,
     campi, leggi, catDi, catNome, schede, vuoto, render, VIEWS, euroInput, cap, pill, stampa, copia, csv, eurCsv, numCsv, vai, pallino } = FG;
   const tabs = (a) => schede('magazzino', [['', 'Articoli'], ['movimenti', 'Movimenti e scarti'], ['inventario', 'Inventario'], ['riordino', 'Lista di riordino']], a);
   const TIPI = { carico: 'Arrivo', vendita: 'Vendita', scarto: 'Scarto', uso: 'Uso interno', reso: 'Reso al fornitore', rettifica: 'Correzione inventario' };
@@ -137,18 +137,18 @@
   // ------------------------------------------------------------ movimenti
   const M = { da: addGiorni(oggi(), -30), a: oggi(), tipo: '' };
   async function movimenti() {
-    let q = `movimenti_vista?data=gte.${M.da}&data=lte.${M.a}&order=data.desc,id.desc&limit=3000`;
+    let q = `movimenti_vista?data=gte.${M.da}&data=lte.${M.a}&order=data.desc,id.desc`;
     if (M.tipo) q += '&tipo=eq.' + M.tipo;
-    const lista = await get(q);
+    const lista = await getTutti(q);
     movimenti.lista = lista;
     const perdite = lista.filter((m) => m.tipo === 'scarto').reduce((a, m) => a + Math.round(-m.quantita * (m.costo_unit_cent || 0)), 0), tit = isOwner();
     return `<header class="testa"><h1>Magazzino</h1><button class="btn primary" type="button" id="m-scarto">+ Registra scarto</button></header>${tabs('movimenti')}
-      <form class="filtri" id="mf"><label class="f"><span>Dal</span><input type="date" name="da" value="${M.da}"></label><label class="f"><span>Al</span><input type="date" name="a" value="${M.a}"></label>
+      <form class="filtri" id="mf"><label class="f"><span>Dal</span><input type="date" name="da" value="${M.da}"></label><label class="f"><span>Al</span><input type="date" name="a" value="${M.a}"></label>${FG.cercaDate}
         <label class="f"><span>Tipo</span><select name="tipo"><option value="">Tutti</option>${Object.entries(TIPI).map(([k, t]) => `<option value="${k}"${k === M.tipo ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
         <button type="button" class="btn sm" id="m-csv"${lista.length ? '' : ' disabled'}>Scarica CSV</button></form>
       <p class="muted">${lista.length} movimenti${tit ? ` · scarti nel periodo: <b class="neg">${esc(eur(perdite))}</b> (al costo)` : ''}</p>
-      ${lista.length ? `<div class="tabella"><table><thead><tr><th>Data</th><th>Articolo</th><th>Tipo</th><th class="n">Quantità</th>${tit ? '<th class="n">Valore</th>' : ''}</tr></thead><tbody>
-        ${lista.map((m) => `<tr><td>${esc(dataIt(m.data))}</td><td>${esc(m.prodotto)}<br><small class="muted">${esc(m.categoria || '')}</small></td>
+      ${notaRighe(lista)}${lista.length ? `<div class="tabella"><table><thead><tr><th>Data</th><th>Articolo</th><th>Tipo</th><th class="n">Quantità</th>${tit ? '<th class="n">Valore</th>' : ''}</tr></thead><tbody>
+        ${righeVisibili(lista).map((m) => `<tr><td>${esc(dataIt(m.data))}</td><td>${esc(m.prodotto)}<br><small class="muted">${esc(m.categoria || '')}</small></td>
           <td>${esc(TIPI[m.tipo])}${m.motivo ? `<br><small class="muted">${esc(m.motivo)}</small>` : ''}${m.bolla_id ? `<br><a class="link" href="#/bolle/${m.bolla_id}">bolla ${esc(m.bolla_numero || '')}${m.fornitore ? ' · ' + esc(m.fornitore) : ''}</a>` : ''}</td>
           <td class="n ${m.quantita < 0 ? 'neg' : 'pos'}">${m.quantita > 0 ? '+' : ''}${esc(num(m.quantita))} ${esc(m.unita)}</td>${tit ? `<td class="n">${esc(eur(Math.round(Math.abs(m.quantita) * (m.costo_unit_cent || 0))))}</td>` : ''}</tr>`).join('')}
         </tbody></table></div>` : vuoto('Nessun movimento nel periodo.')}`;
@@ -405,7 +405,8 @@
         { k: 'fornitore_id', l: 'Fornitore', t: 'select', num: true, o: S.fornitori.map((f) => [f.id, f.nome]), w: 2 }, { k: 'numero', l: 'Numero', max: 60, w: 2 },
         { k: 'data_documento', l: 'Data della bolla', t: 'date', w: 2 }, { k: 'data_arrivo', l: 'Arrivata il', t: 'date', req: true, w: 2 }, { k: 'nota', l: 'Nota', t: 'textarea' }] });
       if (a === 'annulla') {
-        if (!(await conferma('Annullare la bolla? La merce viene tolta dal magazzino. Le foto vengono cancellate.', 'Annulla la bolla'))) return;
+        const fattura = b.spesa_id && isOwner() ? ' La fattura/spesa collegata invece resta in Spese: se era solo per questa bolla, cancellala da lì.' : '';
+        if (!(await conferma('Annullare la bolla? La merce viene tolta dal magazzino. Le foto vengono cancellate.' + fattura, 'Annulla la bolla'))) return;
         try { await rpc('annulla_bolla', { p_id: id }); toast('Bolla annullata'); vai('bolle'); } catch (e) { toast(e.message, 'err'); }
       }
     }));

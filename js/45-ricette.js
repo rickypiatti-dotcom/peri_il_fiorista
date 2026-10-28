@@ -101,8 +101,11 @@
           const dati = { nome: f.nome.value.trim(), categoria_id: Number(f.categoria_id.value) || null, aliquota_iva: Number(f.aliquota_iva.value), prezzo_vendita_cent: prezzo,
             ...(tit ? { manodopera_cent: lavoro } : {}), minuti, note: f.note.value.trim() || null, attiva: f.attiva.checked };
           const [salvata] = r ? await rest('PATCH', 'ricette?id=eq.' + r.id, dati) : await rest('POST', 'ricette', dati);
-          if (r) await rest('DELETE', 'ricetta_righe?ricetta_id=eq.' + r.id);
-          if (buoni.length) await rest('POST', 'ricetta_righe', buoni.map((c) => ({ ricetta_id: salvata.id, prodotto_id: c.prodotto_id, quantita: c.quantita })), 'return=minimal');
+          // componenti: prima si scrivono (aggiornando quelli già presenti), POI si tolgono quelli eliminati. Se la scrittura fallisce
+          // la composizione resta com'era (prima si cancellavano subito: un errore la lasciava senza componenti)
+          if (buoni.length) await rest('POST', 'ricetta_righe?on_conflict=ricetta_id,prodotto_id', buoni.map((c) => ({ ricetta_id: salvata.id, prodotto_id: c.prodotto_id, quantita: c.quantita })), 'resolution=merge-duplicates,return=minimal');
+          const tolti = righe.filter((x) => !buoni.some((c) => c.prodotto_id === x.prodotto_id));
+          if (r && tolti.length) await rest('DELETE', `ricetta_righe?ricetta_id=eq.${r.id}&id=in.(${tolti.map((x) => x.id).join(',')})`);
           chiudi(); toast('Composizione salvata', 'ok'); render(true);
         } catch (ex) { err.textContent = ex.message; err.hidden = false; }
       });

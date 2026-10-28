@@ -1,7 +1,7 @@
 /* Cassa: vendita al banco, totale di giornata dal registratore, elenco incassi, chiusura di cassa. */
 'use strict';
 (() => {
-  const { $, $$, esc, eur, num, cent, qty, oggi, dataIt, quando, get, rpc, rest, S, isOwner, toast, apri, chiudi, conferma, occupato,
+  const { $, $$, esc, eur, num, cent, qty, oggi, dataIt, quando, get, getTutti, righeVisibili, notaRighe, rpc, rest, S, isOwner, toast, apri, chiudi, conferma, occupato,
     csv, eurCsv, numCsv, catDi, catNome, schede, vuoto, render, VIEWS, euroInput, cap } = FG;
   const DOC = [['scontrino', 'Scontrino'], ['fattura', 'Fattura'], ['ricevuta', 'Ricevuta']];
   FG.DOC = DOC;
@@ -28,6 +28,7 @@
     ]);
     if (!S.imp.metodi_incasso.includes(sc.metodo)) sc.metodo = S.imp.metodi_incasso[0];
     if (!catDi('entrata').some((c) => String(c.id) === sc.cat)) sc.cat = String((catDi('entrata')[0] || {}).id || '');
+    if (sc.cliente && !cat.clienti.some((c) => String(c.id) === sc.cliente)) sc.cliente = ''; // cliente cancellato nel frattempo
     return `<header class="testa"><h1>Cassa</h1></header>${tabs('')}<div class="banco-layout"><section class="pos-articoli" id="banco"></section><aside class="pos-carrello card" id="scontrino"></aside></div>
       <button type="button" class="pos-barra" id="pos-barra" hidden></button>`;
   };
@@ -96,7 +97,10 @@
   // ------------------------------------------------------------ scontrino
   function disegnaScontrino() {
     const box = $('#scontrino'); if (!box) return;
-    const puoScontare = isOwner() || S.imp.staff_sconti, tot = daPagare();
+    const puoScontare = isOwner() || S.imp.staff_sconti;
+    // sconto mai più grande dello scontrino (togliendo righe) e niente sconto rimasto da prima se ora non è permesso
+    if (!puoScontare) sc.sconto = 0; else if (sc.sconto > lordo()) sc.sconto = lordo();
+    const tot = daPagare();
     const barra = $('#pos-barra'), pezzi = sc.voci.reduce((a, v) => a + v.quantita, 0);
     barra.hidden = !sc.voci.length;
     barra.innerHTML = `<span>🧾 ${esc(num(pezzi))} ${pezzi === 1 ? 'pezzo' : 'pezzi'}</span><b>${esc(eur(tot))}</b><span>Vai allo scontrino ↓</span>`;
@@ -168,6 +172,7 @@
     if (!sc.voci.length) return;
     const sbagliato = $('#scontrino .sbagliato');
     if (sbagliato) { errore('Correggi il campo in rosso prima di incassare (es. 4,50)'); sbagliato.focus(); return; }
+    if (sc.sconto > lordo()) sc.sconto = lordo();
     const totale = daPagare();
     try {
       await rpc('registra_vendita', { p: {
@@ -188,7 +193,8 @@
       <p class="muted">Per chi batte gli scontrini sul registratore: a fine giornata si inserisce il totale, un importo per ogni metodo di pagamento.
       Così incassi e statistiche restano completi. Il magazzino in questo caso si aggiorna con gli scarti e l'inventario.</p>
       <form id="gg" novalidate><div class="grid-form">
-        <label class="f w2"><span>Giorno</span><input type="date" name="data" value="${oggi()}" max="${oggi()}" required></label>
+        ${isOwner() ? `<label class="f w2"><span>Giorno</span><input type="date" name="data" value="${oggi()}" max="${oggi()}" required></label>`
+          : `<p class="f w2 muted">Giorno: <b>oggi, ${esc(dataIt(oggi()))}</b></p>`}
         <label class="f w2"><span>Tipo di incasso</span><select name="cat">${catDi('entrata').map((c) => `<option value="${c.id}">${esc(c.nome)}</option>`).join('')}</select></label>
         <label class="f w2"><span>IVA media</span><select name="iva">${[10, 22, 4, 5, 0].map((a) => `<option value="${a}"${Number(S.imp.aliquota_default) === a ? ' selected' : ''}>${a}%</option>`).join('')}</select></label>
         <label class="f w2"><span>Numero chiusura (Z)</span><input name="doc" maxlength="60" placeholder="facoltativo"></label>
@@ -208,11 +214,15 @@
         if (imp.some(([, c]) => Number.isNaN(c) || c < 0)) { err.textContent = 'Un importo non è valido (es. 350,50)'; err.hidden = false; return; }
         const veri = imp.filter(([, c]) => c > 0);
         if (!veri.length) { err.textContent = 'Inserisci almeno un importo'; err.hidden = false; return; }
+        const giorno = f.data ? f.data.value : oggi();
+        if (!giorno) { err.textContent = 'Scegli il giorno'; err.hidden = false; return; }
         try {
-          for (const [metodo, c] of veri) {
-            await rpc('registra_vendita', { p: { data: f.data.value, categoria_id: Number(f.cat.value) || null, metodo, documento: 'scontrino',
-              numero_documento: f.doc.value, descrizione: 'Totale di giornata (' + metodo + ')', importo_cent: c, aliquota_iva: Number(f.iva.value) } });
-          }
+          // un totale per lo stesso giorno c'è già? (doppio inserimento: succede facilmente)
+          const gia = await get(`entrate?select=totale_cent&data=eq.${giorno}&descrizione=like.Totale di giornata*`).catch(() => []);
+          if (gia.length && !(await conferma(`Per il ${dataIt(giorno)} hai già registrato un totale di giornata (${eur(gia.reduce((a, x) => a + x.totale_cent, 0))}). Registrarne un altro?`, 'Registra lo stesso', false))) return;
+          // tutti i metodi insieme: o si salva tutto o niente (prima, un errore a metà lasciava solo una parte)
+          await rpc('registra_giornata', { p: { data: giorno, categoria_id: Number(f.cat.value) || null, aliquota_iva: Number(f.iva.value),
+            numero_documento: f.doc.value, importi: Object.fromEntries(veri) } });
           toast('Totale di giornata registrato', 'ok'); FG.vai('cassa/incassi');
         } catch (ex) { err.textContent = ex.message; err.hidden = false; }
       });
@@ -225,17 +235,17 @@
     if (!isOwner()) return mieVendite();
     // i pagamenti "altro" (buoni regalo) hanno una contabilità a parte: pagina Altro (clic sul fiore)
     if (FG.separato(F.metodo)) F.metodo = '';
-    let q = `entrate_vista?data=gte.${F.da}&data=lte.${F.a}&order=data.desc,id.desc&limit=2000&metodo=not.ilike.altro`;
+    let q = `entrate_vista?data=gte.${F.da}&data=lte.${F.a}&order=data.desc,id.desc&metodo=not.ilike.altro`;
     if (F.metodo) q += '&metodo=eq.' + encodeURIComponent(F.metodo);
     if (F.cat) q += '&categoria_id=eq.' + F.cat;
-    const righe = await get(q);
+    const righe = await getTutti(q);
     incassi.righe = righe;
     const tot = righe.reduce((a, r) => a + r.totale_cent, 0);
     const perMetodo = {}; for (const r of righe) perMetodo[r.metodo] = (perMetodo[r.metodo] || 0) + r.totale_cent;
     return `<header class="testa"><h1>Cassa</h1></header>${tabs('incassi')}
       <form class="filtri" id="fi">
         <label class="f"><span>Dal</span><input type="date" name="da" value="${F.da}"></label>
-        <label class="f"><span>Al</span><input type="date" name="a" value="${F.a}"></label>
+        <label class="f"><span>Al</span><input type="date" name="a" value="${F.a}"></label>${FG.cercaDate}
         <label class="f"><span>Metodo</span><select name="metodo"><option value="">Tutti</option>${S.imp.metodi_incasso.filter((m) => !FG.separato(m)).map((m) => `<option${m === F.metodo ? ' selected' : ''}>${esc(m)}</option>`).join('')}</select></label>
         <label class="f"><span>Tipo</span><select name="cat"><option value="">Tutti</option>${catDi('entrata', false).map((c) => `<option value="${c.id}"${String(c.id) === F.cat ? ' selected' : ''}>${esc(c.nome)}</option>`).join('')}</select></label>
         <div class="rapidi"><button type="button" class="chip" data-p="oggi">Oggi</button><button type="button" class="chip" data-p="ieri">Ieri</button><button type="button" class="chip" data-p="mese">Questo mese</button></div>
@@ -244,8 +254,8 @@
       <p class="muted"><small>I pagamenti «altro» (buoni regalo) non sono in questo elenco: hanno la loro <a href="#/altro" class="link">contabilità separata 🌸</a>.</small></p>
       <section class="kpi"><div class="kpi-box"><span>Totale</span><b>${esc(eur(tot))}</b><small>${righe.length} incassi</small></div>
         ${Object.entries(perMetodo).map(([m, t]) => `<div class="kpi-box"><span>${esc(cap(m))}</span><b>${esc(eur(t))}</b></div>`).join('')}</section>
-      ${righe.length ? `<div class="tabella"><table><thead><tr><th>Data</th><th>Cosa</th><th>Tipo</th><th>Pagamento</th><th class="n">Importo</th></tr></thead><tbody>
-        ${righe.map((r) => `<tr data-id="${r.id}" tabindex="0"><td>${esc(dataIt(r.data))}<br><small class="muted">${esc(new Date(r.creato_il).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }))}</small></td>
+      ${notaRighe(righe)}${righe.length ? `<div class="tabella"><table><thead><tr><th>Data</th><th>Cosa</th><th>Tipo</th><th>Pagamento</th><th class="n">Importo</th></tr></thead><tbody>
+        ${righeVisibili(righe).map((r) => `<tr data-id="${r.id}" tabindex="0"><td>${esc(dataIt(r.data))}<br><small class="muted">${esc(new Date(r.creato_il).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }))}</small></td>
           <td>${esc(r.articoli || r.descrizione || '—')}${r.cliente ? `<br><small class="muted">${esc(r.cliente)}</small>` : ''}${r.ordine_numero ? `<br><small class="muted">ordine ${esc(r.ordine_numero)}</small>` : ''}</td>
           <td>${FG.pallino(r.categoria_colore)}${esc(r.categoria || '—')}</td><td>${esc(r.metodo)}<br><small class="muted">${esc(r.documento)}${r.numero_documento ? ' ' + esc(r.numero_documento) : ''}</small></td>
           <td class="n"><b>${esc(eur(r.totale_cent))}</b>${r.sconto_cent ? `<br><small class="muted">sconto ${esc(eur(r.sconto_cent))}</small>` : ''}</td></tr>`).join('')}
@@ -296,6 +306,7 @@
     const s = d.querySelector('[data-salva]');
     if (s) s.onclick = () => occupato(s, async () => {
       const f = d.querySelector('#de');
+      if (!f.data.value) return toast('Scegli la data', 'err');
       try {
         await rest('PATCH', 'entrate?id=eq.' + id, { data: f.data.value, categoria_id: Number(f.categoria_id.value) || null, metodo: f.metodo.value,
           documento: f.documento.value, numero_documento: f.numero_documento.value.trim() || null, nota: f.nota.value.trim() || null });
@@ -321,7 +332,7 @@
     const diff = c ? c.contati_cent - c.attesi_cent : null;
     return `<header class="testa"><h1>Cassa</h1></header>${tabs('chiusura')}
       <div class="colonne2"><section class="card"><h2>Chiusura del ${esc(dataIt(data))}</h2>
-      ${isOwner() ? `<label class="f"><span>Giorno</span><input type="date" id="ch-data" class="filtro" value="${data}" max="${oggi()}"></label>` : ''}
+      ${isOwner() ? `<div class="filtri"><label class="f"><span>Giorno</span><input type="date" id="ch-data" value="${data}" max="${oggi()}"></label>${FG.cercaDate}</div>` : ''}
       <ul class="lista compatta">${Object.entries(per).map(([m, t]) => `<li>${esc(cap(m))} <b>${esc(eur(t))}</b></li>`).join('') || '<li class="muted">Nessun incasso registrato in questo giorno.</li>'}</ul>
       <form id="ch" novalidate class="grid-form">
         <label class="f w2"><span>Fondo cassa a inizio giornata</span><div class="euro"><input name="fondo" inputmode="decimal" value="${esc(euroInput(c ? c.fondo_cent : cg.fondo_proposto || 0))}"><span>€</span></div></label>

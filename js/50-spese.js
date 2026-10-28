@@ -1,7 +1,7 @@
 /* Spese (solo titolare): tutte le uscite con fatture e foto allegate, spese da pagare, spese ricorrenti (affitto, TARI, luce...). */
 'use strict';
 (() => {
-  const { $, $$, esc, eur, num, cent, oggi, dataIt, dataBreve, addGiorni, get, rpc, rest, S, toast, apri, chiudi, conferma, occupato,
+  const { $, $$, esc, eur, num, cent, oggi, dataIt, dataBreve, addGiorni, get, getTutti, righeVisibili, notaRighe, rpc, rest, S, toast, apri, chiudi, conferma, occupato,
     catDi, schede, vuoto, render, VIEWS, euroInput, pill, csv, eurCsv, vai, pallino, giorniTra } = FG;
   const tabs = (a) => schede('spese', [['', 'Tutte le spese'], ['da-pagare', 'Da pagare'], ['ricorrenti', 'Spese ricorrenti']], a);
   const OGNI = { 1: 'ogni mese', 2: 'ogni 2 mesi', 3: 'ogni 3 mesi', 4: 'ogni 4 mesi', 6: 'ogni 6 mesi', 12: 'ogni anno' };
@@ -11,7 +11,7 @@
   VIEWS.spese = async (args) => {
     if (args[0] === 'ricorrenti') return ricorrenti();
     const daPagare = args[0] === 'da-pagare';
-    let q = 'spese_vista?order=' + (daPagare ? 'scadenza.asc.nullslast,data' : 'data.desc,id.desc') + '&limit=3000';
+    let q = 'spese_vista?order=' + (daPagare ? 'scadenza.asc.nullslast,data,id' : 'data.desc,id.desc');
     if (daPagare) q += '&pagata=is.false';
     else {
       q += `&data=gte.${F.da}&data=lte.${F.a}`;
@@ -20,7 +20,7 @@
       if (F.tipo) q += '&categoria_tipo=eq.' + F.tipo;
       if (F.cerca.trim()) q += '&or=(descrizione.ilike.*' + encodeURIComponent(F.cerca.trim().replace(/[*,()]/g, ' ')) + '*,numero_documento.ilike.*' + encodeURIComponent(F.cerca.trim().replace(/[*,()]/g, ' ')) + '*)';
     }
-    const lista = await get(q);
+    const lista = await getTutti(q);
     VIEWS.spese.lista = lista;
     const tot = lista.reduce((a, s) => a + s.importo_cent, 0), iva = lista.reduce((a, s) => a + s.iva_cent, 0);
     const t = oggi();
@@ -28,7 +28,7 @@
     if (id) setTimeout(() => apriSpesa(id), 0);
     return `<header class="testa"><h1>Spese</h1><button class="btn primary" type="button" id="s-nuova">+ Spesa</button></header>${tabs(daPagare ? 'da-pagare' : '')}
       ${daPagare ? '' : `<form class="filtri" id="sf">
-        <label class="f"><span>Dal</span><input type="date" name="da" value="${F.da}"></label><label class="f"><span>Al</span><input type="date" name="a" value="${F.a}"></label>
+        <label class="f"><span>Dal</span><input type="date" name="da" value="${F.da}"></label><label class="f"><span>Al</span><input type="date" name="a" value="${F.a}"></label>${FG.cercaDate}
         <label class="f"><span>Categoria</span><select name="cat"><option value="">Tutte</option>${catDi('spesa', false).map((c) => `<option value="${c.id}"${String(c.id) === F.cat ? ' selected' : ''}>${esc(c.nome)}</option>`).join('')}</select></label>
         <label class="f"><span>Fornitore</span><select name="forn"><option value="">Tutti</option>${S.fornitori.map((f) => `<option value="${f.id}"${String(f.id) === F.forn ? ' selected' : ''}>${esc(f.nome)}</option>`).join('')}</select></label>
         <label class="f"><span>Tipo</span><select name="tipo">${[['', 'Fisse e variabili'], ['fissa', 'Solo fisse'], ['variabile', 'Solo variabili']].map(([k, x]) => `<option value="${k}"${k === F.tipo ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
@@ -37,8 +37,8 @@
         <button type="button" class="btn sm" id="s-csv"${lista.length ? '' : ' disabled'}>Scarica CSV</button></form>`}
       <section class="kpi"><div class="kpi-box"><span>${daPagare ? 'Da pagare' : 'Totale spese'}</span><b>${esc(eur(tot))}</b><small>${lista.length} spese · IVA ${esc(eur(iva))}</small></div>
         ${daPagare ? `<div class="kpi-box neg"><span>Già scadute</span><b>${esc(eur(lista.filter((s) => s.scadenza && s.scadenza < t).reduce((a, s) => a + s.importo_cent, 0)))}</b></div>` : ''}</section>
-      ${lista.length ? `<div class="tabella"><table><thead><tr><th>Data</th><th>Spesa</th><th>Categoria</th><th>Pagamento</th><th class="n">Importo</th></tr></thead><tbody>
-        ${lista.map((s) => `<tr data-id="${s.id}" tabindex="0"><td>${esc(dataIt(s.data))}</td>
+      ${notaRighe(lista)}${lista.length ? `<div class="tabella"><table><thead><tr><th>Data</th><th>Spesa</th><th>Categoria</th><th>Pagamento</th><th class="n">Importo</th></tr></thead><tbody>
+        ${righeVisibili(lista).map((s) => `<tr data-id="${s.id}" tabindex="0"><td>${esc(dataIt(s.data))}</td>
           <td><b>${esc(s.descrizione)}</b>${s.fornitore ? `<br><small class="muted">${esc(s.fornitore)}</small>` : ''}${s.numero_documento ? `<br><small class="muted">n. ${esc(s.numero_documento)}</small>` : ''}${s.allegati ? ' 📎' : ''}${s.bolle ? ` <small class="muted">· ${s.bolle} bolle</small>` : ''}</td>
           <td>${pallino(s.categoria_colore)}${esc(s.categoria || '—')}${s.categoria_tipo === 'fissa' ? ' <small class="muted">fissa</small>' : ''}</td>
           <td>${esc(s.metodo)}<br>${s.pagata ? '<small class="pos">pagata</small>' : `<small class="${s.scadenza && s.scadenza < t ? 'neg' : 'att'}">da pagare${s.scadenza ? ' entro ' + esc(dataBreve(s.scadenza)) : ''}</small>`}</td>
@@ -177,12 +177,14 @@
       } catch (ex) { toast(ex.message, 'err'); }
     });
   }
+  // come PostgreSQL (data + N mesi): se il giorno non esiste nel mese si va all'ultimo (31 gen + 1 mese = 28/29 feb)
+  const dopoMesi = (s, n) => { const [y, m, g] = s.split('-').map(Number); const ultimo = new Date(y, m - 1 + n + 1, 0).getDate(); return FG.iso(new Date(y, m - 1 + n, Math.min(g, ultimo))); };
   function registra(r) {
     const d = apri(`<h2>Registra: ${esc(r.descrizione)}</h2><form novalidate class="grid-form">
       <label class="f w2"><span>Data</span><input type="date" name="data" value="${esc(r.prossima)}"></label>
       <label class="f w2"><span>Importo (cambialo se la bolletta è diversa)</span><div class="euro"><input name="imp" inputmode="decimal" value="${esc(euroInput(r.importo_cent))}"><span>€</span></div></label>
       <label class="check"><input type="checkbox" name="pagata" checked> <span>Già pagata</span></label>
-      <p class="muted w1">La prossima scadenza passa al ${esc(dataIt(FG.iso(new Date(Number(r.prossima.slice(0, 4)), Number(r.prossima.slice(5, 7)) - 1 + r.ogni_mesi, Number(r.prossima.slice(8, 10))))))}.</p>
+      <p class="muted w1">La prossima scadenza passa al ${esc(dataIt(dopoMesi(r.prossima, r.ogni_mesi)))}.</p>
       <p class="alert err" hidden></p><div class="azioni"><button class="btn" type="button" data-no>Annulla</button><button class="btn primary" type="submit">Registra la spesa</button></div></form>`, 'piccolo');
     const f = d.querySelector('form'); d.querySelector('[data-no]').onclick = chiudi;
     f.onsubmit = (e) => {
