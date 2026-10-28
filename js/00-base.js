@@ -221,6 +221,37 @@ window.FG = (() => {
   document.addEventListener('click', riseleziona, true);
   document.addEventListener('keydown', (e) => { if (e.target instanceof HTMLInputElement) e.target._selezionaAlClic = false; }, true);
 
+  // ------------------------------------------------------------ date dei filtri: si aggiornano a data FINITA, non a ogni cifra
+  // Con una data già piena il browser manda «change» a ogni cifra scritta (giorno «2» = data valida) e la pagina si ridisegnava
+  // prima di poter scrivere il mese. Qui il «change» si trattiene: scelta dal calendario = subito; scrivendo a mano = dopo una pausa,
+  // con Invio o uscendo dal campo; anni a meno di 4 cifre (0002, 0020...) ignorati.
+  const DATA_FILTRO = '.filtri input[type=date], input[type=date].filtro', PAUSA_DATA = 1500;
+  const dataFinita = (v) => /^(19|20)\d\d-\d\d-\d\d$/.test(v);
+  const confermaData = (el) => {
+    clearTimeout(el._attesa); el._attesa = 0;
+    if (el._ultima === undefined) el._ultima = el.defaultValue;
+    if (!el.isConnected || !dataFinita(el.value) || el.value === el._ultima) return;
+    el._ultima = el.value; el._passa = true;
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    el._passa = false;
+  };
+  document.addEventListener('keydown', (e) => {
+    const el = e.target;
+    if (!(el instanceof HTMLInputElement) || !el.matches(DATA_FILTRO)) return;
+    el._tasto = Date.now();
+    if (e.key === 'Enter') { e.preventDefault(); confermaData(el); }
+    else if (el._attesa) { clearTimeout(el._attesa); el._attesa = setTimeout(() => confermaData(el), PAUSA_DATA); }
+  }, true);
+  document.addEventListener('change', (e) => {
+    const el = e.target;
+    if (!(el instanceof HTMLInputElement) || !el.matches(DATA_FILTRO) || el._passa) return;
+    e.stopImmediatePropagation();
+    clearTimeout(el._attesa);
+    if (Date.now() - (el._tasto || 0) < 500) el._attesa = setTimeout(() => confermaData(el), PAUSA_DATA);
+    else confermaData(el);
+  }, true);
+  document.addEventListener('focusout', (e) => { const el = e.target; if (el instanceof HTMLInputElement && el._attesa) confermaData(el); }, true);
+
   // ------------------------------------------------------------ finestre
   function apri(html, cls = '') {
     const m = $('#modal');

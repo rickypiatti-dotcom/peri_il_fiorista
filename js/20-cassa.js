@@ -321,7 +321,7 @@
     const diff = c ? c.contati_cent - c.attesi_cent : null;
     return `<header class="testa"><h1>Cassa</h1></header>${tabs('chiusura')}
       <div class="colonne2"><section class="card"><h2>Chiusura del ${esc(dataIt(data))}</h2>
-      ${isOwner() ? `<label class="f"><span>Giorno</span><input type="date" id="ch-data" value="${data}" max="${oggi()}"></label>` : ''}
+      ${isOwner() ? `<label class="f"><span>Giorno</span><input type="date" id="ch-data" class="filtro" value="${data}" max="${oggi()}"></label>` : ''}
       <ul class="lista compatta">${Object.entries(per).map(([m, t]) => `<li>${esc(cap(m))} <b>${esc(eur(t))}</b></li>`).join('') || '<li class="muted">Nessun incasso registrato in questo giorno.</li>'}</ul>
       <form id="ch" novalidate class="grid-form">
         <label class="f w2"><span>Fondo cassa a inizio giornata</span><div class="euro"><input name="fondo" inputmode="decimal" value="${esc(euroInput(c ? c.fondo_cent : cg.fondo_proposto || 0))}"><span>€</span></div></label>
