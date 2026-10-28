@@ -18,11 +18,11 @@ try {
     await A.toast(pg, 'Totale di giornata registrato');
     assert.equal((await A.q('select count(*)::int n from entrate'))[0].n, 3);
   });
-  await prova('elenco incassi: 500 € senza «altro», con il rimando alla pagina Altro', async () => {
+  await prova('elenco incassi: 500 € senza «altro» (e senza scritte sulla pagina Altro, richiesta di Riccardo del 28 ott)', async () => {
     await A.vai(pg, 'cassa/incassi');
     const t = await testo(pg);
     assert.match(t, /Totale\s*500,00\s*€/); assert.doesNotMatch(t, /150,00/);
-    assert.match(t, /contabilità separata/);
+    assert.doesNotMatch(t, /contabilità separata/);
     assert.ok(!(await pg.$$eval('#fi [name=metodo] option', (o) => o.map((x) => x.textContent))).includes('altro'));
   });
   await prova('cruscotto: incassato oggi 500 €, niente «altro»', async () => {

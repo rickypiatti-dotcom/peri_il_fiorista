@@ -251,7 +251,6 @@
         <div class="rapidi"><button type="button" class="chip" data-p="oggi">Oggi</button><button type="button" class="chip" data-p="ieri">Ieri</button><button type="button" class="chip" data-p="mese">Questo mese</button></div>
         <button type="button" class="btn sm" id="fi-csv"${righe.length ? '' : ' disabled'}>Scarica CSV</button>
       </form>
-      <p class="muted"><small>I pagamenti «altro» (buoni regalo) non sono in questo elenco: hanno la loro <a href="#/altro" class="link">contabilità separata 🌸</a>.</small></p>
       <section class="kpi"><div class="kpi-box"><span>Totale</span><b>${esc(eur(tot))}</b><small>${righe.length} incassi</small></div>
         ${Object.entries(perMetodo).map(([m, t]) => `<div class="kpi-box"><span>${esc(cap(m))}</span><b>${esc(eur(t))}</b></div>`).join('')}</section>
       ${notaRighe(righe)}${righe.length ? `<div class="tabella"><table><thead><tr><th>Data</th><th>Cosa</th><th>Tipo</th><th>Pagamento</th><th class="n">Importo</th></tr></thead><tbody>

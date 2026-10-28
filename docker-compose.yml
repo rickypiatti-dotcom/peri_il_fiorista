@@ -49,9 +49,9 @@ services:
       JWT_SECRET: ${SERVICE_PASSWORD_64_JWT}
       ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
-      # Con il tunnel Cloudflare l'IP vero del visitatore è in CF-Connecting-IP (limite dei tentativi di login per persona).
-      # In prova (solo VPN) non cambia nulla.
-      TRUST_CF_HEADER: "1"
+      # 0 = con Tailscale Funnel (pubblico dal 28 ott 2026) CF-Connecting-IP si potrebbe falsificare: si usa l'indirizzo della
+      # connessione, quindi il limite dei tentativi di login è COMUNE a tutti (come Del Duca). Con un tunnel Cloudflare: "1".
+      TRUST_CF_HEADER: "0"
 
   web:
     build:
