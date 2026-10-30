@@ -1,5 +1,5 @@
 # Gestionale (HTML/CSS/JS statici, senza compilazione) servito da nginx.
-FROM nginx:1.27-alpine
+FROM nginx:1.28-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY nginx-security.conf /etc/nginx/snippets/security.conf
 COPY index.html robots.txt favicon.svg /usr/share/nginx/html/
